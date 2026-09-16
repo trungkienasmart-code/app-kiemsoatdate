@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Hệ Thống Kiểm Soát Date & Vận Hành Siêu Thị - App Tinh Gọn</title>
+    <!-- FontAwesome & SheetJS & Barcode Engine -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --text: #0f172a;
+            --text-sub: #64748b;
+            --border: #e2e8f0;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --orange: #f97316;
+            --success: #10b981;
+            --purple: #8b5cf6;
+        }
+
+        [data-theme="dark"] {
+            --primary: #3b82f6;
+            --primary-hover: #60a5fa;
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --text: #f8fafc;
+            --text-sub: #94a3b8;
+            --border: #334155;
+            --danger: #f87171;
+            --warning: #fbbf24;
+            --orange: #fb923c;
+            --success: #34d399;
+            --purple: #a78bfa;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background-color: var(--bg); color: var(--text); display: flex; flex-direction: column; min-height: 100vh; }
+
+        /* TOPBAR & FOOTER */
+        .topbar { background-color: var(--surface); border-bottom: 1px solid var(--border); padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+        .topbar-info h1 { font-size: 15px; font-weight: 700; color: var(--primary); }
+        .topbar-info p { font-size: 11px; color: var(--text-sub); }
+        .topbar-actions { display: flex; gap: 8px; align-items: center; }
+
+        .footer { margin-top: auto; padding: 12px; text-align: center; font-size: 11px; color: var(--text-sub); border-top: 1px dashed var(--border); background: var(--surface); }
+        .footer strong { color: var(--primary); }
+
+        .container { width: 100%; max-width: 1050px; margin: 0 auto; padding: 12px; }
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+
+        /* TABS */
+        .tabs { display: flex; gap: 6px; overflow-x: auto; border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 12px; }
+        .tab-btn { padding: 8px 12px; border-radius: 8px; border: none; background: var(--bg); color: var(--text-sub); font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: 0.2s; }
+        .tab-btn.active { background: var(--primary); color: #fff; }
+
+        /* FORMS & INPUTS */
+        .form-group { margin-bottom: 10px; }
+        .form-group label { display: block; font-size: 11px; font-weight: 700; margin-bottom: 4px; color: var(--text-sub); text-transform: uppercase; }
+        .form-control { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 14px; outline: none; }
+        .form-control:focus { border-color: var(--primary); }
+        .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .input-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+
+        /* BUTTONS */
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 12px; border: none; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; color: #fff; text-decoration: none; }
+        .btn-primary { background: var(--primary); }
+        .btn-success { background: var(--success); }
+        .btn-warning { background: var(--warning); color: #000; }
+        .btn-danger { background: var(--danger); }
+        .btn-purple { background: var(--purple); }
+        .btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+        .btn-block { width: 100%; }
+
+        /* KPI STATS */
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 12px; }
+        .kpi-item { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px; text-align: center; }
+        .kpi-title { font-size: 11px; font-weight: 600; color: var(--text-sub); }
+        .kpi-value { font-size: 18px; font-weight: 800; margin-top: 4px; }
+
+        /* SCANNER */
+        .scanner-box { position: relative; width: 100%; max-width: 420px; margin: 0 auto 12px; border-radius: 12px; overflow: hidden; border: 2px solid var(--primary); display: none; background: #000; }
+        .scanner-tools { display: flex; justify-content: space-around; background: rgba(0,0,0,0.7); padding: 8px; position: absolute; bottom: 0; width: 100%; z-index: 10; }
+        .scanner-tools button { background: transparent; color: white; border: none; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+
+        /* DATE WARNING BADGES */
+        .date-badge { padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 800; display: inline-block; }
+        .badge-red { background: #fee2e2; color: #b91c1c; border: 1px solid #f87171; }
+        .badge-orange { background: #ffedd5; color: #c2410c; border: 1px solid #fb923c; }
+        .badge-yellow { background: #fef9c3; color: #854d0e; border: 1px solid #facc15; }
+        .badge-green { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+
+        .pending-card { border-left: 5px solid var(--border); padding: 12px; border-radius: 8px; background: var(--bg); margin-bottom: 10px; border-top: 1px solid var(--border); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+        .pending-card.border-red { border-left-color: var(--danger); }
+        .pending-card.border-orange { border-left-color: var(--orange); }
+        .pending-card.border-yellow { border-left-color: var(--warning); }
+
+        /* TABLE */
+        .table-wrap { width: 100%; max-height: 350px; overflow: auto; border: 1px solid var(--border); border-radius: 8px; margin-top: 8px; }
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 12px; }
+        th { background: var(--bg); padding: 10px; color: var(--text-sub); font-weight: 700; position: sticky; top: 0; border-bottom: 1px solid var(--border); z-index: 2; }
+        td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+
+        /* MODAL */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; padding: 14px; }
+        .modal-content { background: var(--surface); border-radius: 12px; max-width: 580px; width: 100%; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--border); }
+        .modal-header { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-weight: 700; }
+        .modal-body { padding: 14px; overflow-y: auto; }
+        .modal-footer { padding: 10px 14px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
+
+        /* TOAST & LOADER */
+        #toast { position: fixed; bottom: 20px; right: 20px; background: #1e293b; color: white; padding: 12px 18px; border-radius: 8px; font-size: 13px; z-index: 9999; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.25); }
+        #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.65); z-index: 9998; display: none; align-items: center; justify-content: center; color: white; flex-direction: column; gap: 12px; font-size: 14px; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <!-- TOPBAR -->
+    <header class="topbar">
+        <div class="topbar-info">
+            <h1 id="topTenantName">APP TINH GỌN - DATE</h1>
+            <p id="topSubInfo">Hệ Thống Kiểm Soát Date Siêu Thị</p>
+        </div>
+        <div class="topbar-actions">
+            <button class="btn btn-secondary" onclick="toggleTheme()" title="Sáng/Tối"><i class="fa-solid fa-moon"></i></button>
+            <button class="btn btn-secondary" id="btnLogout" onclick="logout()" style="display:none;" title="Đăng xuất"><i class="fa-solid fa-right-from-bracket"></i></button>
+        </div>
+    </header>
+
+    <!-- LOADING OVERLAY NÂNG CẤP -->
+    <div id="loadingOverlay">
+        <i class="fa-solid fa-spinner fa-spin fa-2x" style="color:var(--primary);"></i>
+        <div id="loadingMsg" style="font-weight:600;">Đang khởi tạo hệ thống...</div>
+        <div id="loadingSubMsg" style="font-size:12px; color:#cbd5e1;">Vui lòng chờ trong giây lát</div>
+    </div>
+    <div id="toast"></div>
+
+    <main class="container">
+
+        <!-- ================= VIEW 1: ĐĂNG NHẬP ================= -->
+        <section id="viewLogin" class="card" style="max-width:400px; margin: 40px auto;">
+            <h2 style="font-size: 17px; margin-bottom: 14px; text-align:center; color:var(--primary);"><i class="fa-solid fa-calendar-check"></i> ĐĂNG NHẬP HỆ THỐNG</h2>
+            <div class="form-group">
+                <label>Mã Công Ty / Doanh Nghiệp</label>
+                <input type="text" id="loginTenantCode" class="form-control" value="asmart" placeholder="VD: asmart, thagroup..." oninput="this.value=this.value.toLowerCase()">
+            </div>
+            <div class="form-group">
+                <label>Tên đăng nhập</label>
+                <input type="text" id="loginUsername" class="form-control" value="admin" placeholder="Tên đăng nhập...">
+            </div>
+            <div class="form-group">
+                <label>Mật khẩu</label>
+                <input type="password" id="loginPassword" class="form-control" value="123456" placeholder="Mật khẩu...">
+            </div>
+            <button class="btn btn-primary btn-block" style="margin-top:6px;" onclick="handleLogin()">
+                <i class="fa-solid fa-arrow-right-to-bracket"></i> ĐĂNG NHẬP
+            </button>
+        </section>
+
+        <!-- ================= VIEW 2: GIAO DIỆN NHÂN VIÊN ================= -->
+        <section id="viewStaff" style="display:none;">
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchStaffTab('tabStaffPending')"><i class="fa-solid fa-bell"></i> Hàng Cần Xử Lý</button>
+                <button class="tab-btn" onclick="switchStaffTab('tabStaffScanDate')"><i class="fa-solid fa-barcode"></i> Kiểm Date Mới</button>
+                <button class="tab-btn" onclick="switchStaffTab('tabStaffUtility')"><i class="fa-solid fa-toolbox"></i> Tiện Ích</button>
+            </div>
+
+            <!-- TAB 1 (MẶC ĐỊNH): HÀNG CẦN XỬ LÝ -->
+            <div id="tabStaffPending" class="staff-tab-content">
+                <div class="card">
+                    <div class="form-group" style="margin-bottom:6px;">
+                        <label>LỌC THEO QUẦY HÀNG PHỤ TRÁCH</label>
+                        <div style="display:flex; gap:8px;">
+                            <select id="staffFilterCounterSelect" class="form-control" onchange="loadStaffPendingList()"></select>
+                            <button class="btn btn-primary" onclick="loadStaffPendingList()" title="Làm mới"><i class="fa-solid fa-arrows-rotate"></i> Refresh</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="staffPendingContainer"></div>
+            </div>
+
+            <!-- TAB 2: QUÉT & KHAI BÁO DATE MỚI -->
+            <div id="tabStaffScanDate" class="staff-tab-content" style="display:none;">
+                <div class="card">
+                    <div class="input-row">
+                        <div class="form-group">
+                            <label>QUẦY HÀNG ĐANG ĐỨNG</label>
+                            <select id="staffInputCounterSelect" class="form-control"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>NHÓM HÀNG</label>
+                            <select id="staffInputCategorySelect" class="form-control"></select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Camera quét mã vạch kiểm date -->
+                <div id="scannerWrapper" class="scanner-box">
+                    <div id="qr-reader"></div>
+                    <div class="scanner-tools">
+                        <button onclick="toggleTorch()"><i class="fa-solid fa-bolt"></i> Đèn Flash</button>
+                        <button onclick="stopScanner()"><i class="fa-solid fa-xmark"></i> Tắt Camera</button>
+                    </div>
+                </div>
+
+                <!-- Khung nhập hàng & hạn dùng -->
+                <div class="card">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <span style="font-size:12px; font-weight:bold; color:var(--primary);"><i class="fa-solid fa-magnifying-glass"></i> Nhập Thông Tin Hàng</span>
+                        <button class="btn btn-secondary" style="min-height:30px; padding:4px 10px; font-size:12px;" onclick="toggleCameraUI()">
+                            <i class="fa-solid fa-camera"></i> <span id="btnCamText">Mở Camera</span>
+                        </button>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Mã vạch / Mã hàng</label>
+                        <input type="text" id="staffBarcodeInput" class="form-control" placeholder="Bắn máy quét hoặc gõ mã...">
+                    </div>
+
+                    <div class="input-row">
+                        <div class="form-group">
+                            <label>Số lượng cận date</label>
+                            <input type="number" id="staffQtyInput" class="form-control" value="1" step="any">
+                        </div>
+                        <div class="form-group">
+                            <label>Hạn sử dụng (EXP)</label>
+                            <input type="date" id="staffExpDateInput" class="form-control">
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary btn-block" onclick="handleAddStaffDateItem()">
+                        <i class="fa-solid fa-plus"></i> THÊM VÀO DANH SÁCH CHỜ LƯU
+                    </button>
+                </div>
+
+                <!-- Live Table -->
+                <div class="card">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                        <h3 style="font-size:13px;">Danh sách quét đợt này (<span id="liveDateCount">0</span> dòng)</h3>
+                        <button class="btn btn-secondary" style="min-height:26px; padding:2px 8px; font-size:11px;" onclick="clearLiveDateTable()">Xóa Bảng</button>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>STT</th>
+                                    <th>MÃ HÀNG</th>
+                                    <th>TÊN HÀNG</th>
+                                    <th>HẠN DÙNG</th>
+                                    <th>SL</th>
+                                    <th>XÓA</th>
+                                </tr>
+                            </thead>
+                            <tbody id="liveDateTableBody"></tbody>
+                        </table>
+                    </div>
+                    <button class="btn btn-success btn-block" style="margin-top:10px;" onclick="openConfirmSaveModal()">
+                        <i class="fa-solid fa-cloud-arrow-up"></i> GỬI DỮ LIỆU LÊN HỆ THỐNG
+                    </button>
+                </div>
+            </div>
+
+            <!-- TAB 3: TIỆN ÍCH CHO NHÂN VIÊN -->
+            <div id="tabStaffUtility" class="staff-tab-content" style="display:none;">
+                <div id="staffPrintContainer"></div>
+            </div>
+        </section>
+
+        <!-- ================= VIEW 3: GIAO DIỆN ADMIN ================= -->
+        <section id="viewAdmin" style="display:none;">
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchAdminTab('tabAdminDash')"><i class="fa-solid fa-chart-line"></i> Dashboard Date</button>
+                <button class="tab-btn" onclick="switchAdminTab('tabAdminReport')"><i class="fa-solid fa-file-lines"></i> Báo Cáo Rà Soát</button>
+                <button class="tab-btn" onclick="switchAdminTab('tabAdminConfig')"><i class="fa-solid fa-sliders"></i> Cấu Hình Danh Mục</button>
+                <button class="tab-btn" onclick="switchAdminTab('tabAdminUsers')"><i class="fa-solid fa-user-gear"></i> Thiết Lập Tài Khoản</button>
+                <button class="tab-btn" onclick="switchAdminTab('tabAdminGuide')"><i class="fa-solid fa-circle-question"></i> Hướng Dẫn</button>
+                <button class="tab-btn" onclick="switchAdminTab('tabAdminUtility')"><i class="fa-solid fa-toolbox"></i> Tiện Ích</button>
+            </div>
+
+            <!-- TAB ADMIN 1: DASHBOARD DATE -->
+            <div id="tabAdminDash" class="admin-tab-content">
+                <div class="kpi-grid">
+                    <div class="kpi-item"><div class="kpi-title">Tổng mã cận date</div><div class="kpi-value" id="kpiTotal">0</div></div>
+                    <div class="kpi-item" style="border-color:var(--danger);"><div class="kpi-title" style="color:var(--danger);">Cực nguy cấp (≤ 7 ngày)</div><div class="kpi-value" style="color:var(--danger);" id="kpiRed">0</div></div>
+                    <div class="kpi-item" style="border-color:var(--orange);"><div class="kpi-title" style="color:var(--orange);">Nguy cơ cao (8-15 ngày)</div><div class="kpi-value" style="color:var(--orange);" id="kpiOrange">0</div></div>
+                    <div class="kpi-item"><div class="kpi-title">Chưa có chỉ đạo</div><div class="kpi-value" style="color:var(--purple);" id="kpiPendingInstruct">0</div></div>
+                </div>
+
+                <div class="card">
+                    <div class="input-row">
+                        <div class="form-group">
+                            <label>Lọc Chi Nhánh</label>
+                            <select id="adminBranchFilter" class="form-control" onchange="loadAdminDashboardData()"></select>
+                        </div>
+                        <div style="display:flex; align-items:flex-end;">
+                            <button class="btn btn-primary btn-block" onclick="loadAdminDashboardData()"><i class="fa-solid fa-arrows-rotate"></i> Làm Mới Dữ Liệu</button>
+                        </div>
+                    </div>
+
+                    <div class="table-wrap" style="max-height:400px;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>CẢNH BÁO</th>
+                                    <th>MÃ HÀNG</th>
+                                    <th>TÊN HÀNG</th>
+                                    <th>SL</th>
+                                    <th>HẠN DÙNG</th>
+                                    <th>QUẦY</th>
+                                    <th>CHỈ ĐẠO CỦA ADMIN</th>
+                                    <th>NV THỰC HIỆN</th>
+                                    <th>THAO TÁC</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminDashboardTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB ADMIN 2: BÁO CÁO RÀ SOÁT -->
+            <div id="tabAdminReport" class="admin-tab-content" style="display:none;">
+                <div class="card">
+                    <div class="input-row-3">
+                        <div class="form-group"><label>Từ ngày</label><input type="date" id="reportFromDate" class="form-control"></div>
+                        <div class="form-group"><label>Đến ngày</label><input type="date" id="reportToDate" class="form-control"></div>
+                        <div class="form-group"><label>Chi Nhánh</label><select id="reportBranchSelect" class="form-control"></select></div>
+                    </div>
+                    <div style="display:grid; grid-template-columns: 2fr 1fr; gap:8px;">
+                        <button class="btn btn-primary" onclick="handleRunDateReport()"><i class="fa-solid fa-magnifying-glass"></i> Chạy Báo Cáo</button>
+                        <button class="btn btn-success" onclick="exportReportExcel()"><i class="fa-solid fa-file-excel"></i> Xuất File Excel</button>
+                    </div>
+
+                    <div class="table-wrap" style="max-height:380px;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>MÃ HÀNG</th>
+                                    <th>TÊN HÀNG</th>
+                                    <th>SL</th>
+                                    <th>EXP DATE</th>
+                                    <th>NGƯỜI QUÉT / GIỜ</th>
+                                    <th>ADMIN CHỈ ĐẠO / GIỜ</th>
+                                    <th>NV LÀM / GIỜ</th>
+                                    <th>TRẠNG THÁI</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminReportTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB ADMIN 3: CẤU HÌNH DANH MỤC & QUẦY HÀNG -->
+            <div id="tabAdminConfig" class="admin-tab-content" style="display:none;">
+                <div class="card">
+                    <h3 style="font-size:14px; margin-bottom:10px; color:var(--primary);"><i class="fa-solid fa-file-excel"></i> Nạp Bổ Sung / Ghi Đè Danh Mục Hàng Hóa</h3>
+                    <p style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">Chọn file Excel (Mã hàng, Tên hàng, ĐVT, Mã quầy, Nhóm hàng). Trùng mã tự ghi đè thông tin mới.</p>
+                    <input type="file" id="catalogFileInput" class="form-control" accept=".xlsx, .xls, .csv" style="margin-bottom:10px;">
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                        <button class="btn btn-primary" onclick="handleUploadCatalogFile()"><i class="fa-solid fa-upload"></i> Nạp File Danh Mục</button>
+                        <button class="btn btn-success" onclick="handleDownloadCatalog()"><i class="fa-solid fa-download"></i> Tải Danh Mục Về Máy</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3 style="font-size:14px; margin-bottom:10px;"><i class="fa-solid fa-plus"></i> Thêm Quầy Hàng / Nhóm Hàng Mới</h3>
+                    <div class="input-row-3">
+                        <div class="form-group">
+                            <label>Loại cấu hình</label>
+                            <select id="configTypeSelect" class="form-control">
+                                <option value="QUAY_HANG">Quầy Hàng</option>
+                                <option value="NHOM_HANG">Nhóm Hàng</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>Mã</label><input type="text" id="configCodeInput" class="form-control" placeholder="VD: Q_RAU..."></div>
+                        <div class="form-group"><label>Tên hiển thị</label><input type="text" id="configNameInput" class="form-control" placeholder="VD: Quầy Rau củ quả..."></div>
+                    </div>
+                    <button class="btn btn-primary btn-block" onclick="handleSaveConfigItem()">Lưu Cấu Hình Mới</button>
+                </div>
+            </div>
+
+            <!-- TAB ADMIN 4: THIẾT LẬP USER -->
+            <div id="tabAdminUsers" class="admin-tab-content" style="display:none;">
+                <div class="card">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <h3 style="font-size:14px;"><i class="fa-solid fa-users"></i> Danh Sách Tài Khoản</h3>
+                        <button class="btn btn-primary" style="min-height:30px; font-size:12px;" onclick="openCreateUserModal()">+ Tạo User Mới</button>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead><tr><th>USERNAME</th><th>HỌ VÀ TÊN</th><th>VAI TRÒ</th><th>CHI NHÁNH</th></tr></thead>
+                            <tbody id="userListBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB ADMIN 5: HƯỚNG DẪN -->
+            <div id="tabAdminGuide" class="admin-tab-content" style="display:none;">
+                <div class="card" style="font-size:13px; line-height:1.6;">
+                    <h3 style="color:var(--primary); margin-bottom:8px;">Quy Trình Kiểm Soát Date Siêu Thị</h3>
+                    <ol style="padding-left:18px;">
+                        <li><strong>Nhân viên:</strong> Đi kiểm tra quầy. Quét các mã cận date, nhập HSD và số lượng. Hệ thống lưu vào cơ sở dữ liệu.</li>
+                        <li><strong>Admin:</strong> Vào Dashboard lọc hàng ngày, gõ/chọn chỉ đạo xử lý (giảm giá, combo, trả hàng, hủy).</li>
+                        <li><strong>Nhân viên:</strong> Mở Tab "Hàng cần xử lý" xem chỉ đạo, làm xong bấm "Đã làm theo hướng dẫn".</li>
+                        <li><strong>Hoàn thành:</strong> Khi hàng đã bán hết hoặc đem hủy, bấm "Đã bán hết / Đã hủy" để đóng mã.</li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- TAB ADMIN 6: TIỆN ÍCH (ĐÃ SỬA: KHÔNG BỊ NHẢY GIAO DIỆN NHÂN VIÊN) -->
+            <div id="tabAdminUtility" class="admin-tab-content" style="display:none;">
+                <div id="adminPrintContainer"></div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- DATALIST GỢI Ý PHƯƠNG ÁN CỦA ADMIN -->
+    <datalist id="actionTemplatesList"></datalist>
+
+    <!-- ================= MODALS ================= -->
+
+    <!-- MODAL 1: NHẬP THÔNG TIN KHI QUÉT MÃ MỚI NGOÀI QUẦY -->
+    <div id="quickAddProductModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span style="color:var(--danger);"><i class="fa-solid fa-triangle-exclamation"></i> Mã Mới Chưa Có Trong Danh Mục</span>
+                <i class="fa-solid fa-xmark" style="cursor:pointer;" onclick="closeModal('quickAddProductModal')"></i>
+            </div>
+            <div class="modal-body">
+                <p style="font-size:12px; color:var(--text-sub); margin-bottom:10px;">Mã hàng này chưa có trong hệ thống. Vui lòng nhập Tên và ĐVT để hệ thống cập nhật vào Danh Mục Cơ Sở Dữ Liệu!</p>
+                <div class="form-group"><label>Mã vạch</label><input type="text" id="quickAddBarcode" class="form-control" readonly></div>
+                <div class="form-group"><label>Tên hàng hóa <span style="color:red">*</span></label><input type="text" id="quickAddName" class="form-control" placeholder="VD: Sữa chua Ba Vì có đường 100g..."></div>
+                <div class="form-group"><label>Đơn vị tính</label><input type="text" id="quickAddDvt" class="form-control" placeholder="Hộp, Gói, Chai, Lốc..."></div>
+                <div class="input-row">
+                    <div class="form-group"><label>Quầy hàng (Mặc định)</label><input type="text" id="quickAddCounter" class="form-control" readonly></div>
+                    <div class="form-group"><label>Nhóm hàng (Mặc định)</label><input type="text" id="quickAddCategory" class="form-control" readonly></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="handleConfirmQuickAddProduct()">Lưu & Bổ Sung Danh Mục</button>
+                <button class="btn btn-secondary" onclick="closeModal('quickAddProductModal')">Hủy</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: XÁC NHẬN TRƯỚC KHI GỬI DỮ LIỆU DATE LÊN SERVER -->
+    <div id="confirmSaveBatchModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span><i class="fa-solid fa-circle-question" style="color:var(--primary);"></i> Xác Nhận Gửi Hàng Cận Date</span>
+                <i class="fa-solid fa-xmark" style="cursor:pointer;" onclick="closeModal('confirmSaveBatchModal')"></i>
+            </div>
+            <div class="modal-body">
+                <p style="font-size:12px; margin-bottom:8px;">Vui lòng kiểm tra lại danh sách <strong id="confirmBatchCount" style="color:var(--danger);">0</strong> mặt hàng sẽ được ghi vào cơ sở dữ liệu:</p>
+                <div class="table-wrap" style="max-height:220px;">
+                    <table>
+                        <thead><tr><th>MÃ HÀNG</th><th>TÊN HÀNG</th><th>SL</th><th>EXP DATE</th></tr></thead>
+                        <tbody id="confirmBatchBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-success" onclick="executeSaveDateBatch()"><i class="fa-solid fa-check"></i> Xác Nhận Lưu</button>
+                <button class="btn btn-secondary" onclick="closeModal('confirmSaveBatchModal')">Xem Lại</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 3: TẠO USER MỚI (ADMIN) -->
+    <div id="createUserModal" class="modal">
+        <div class="modal-content" style="max-width:380px;">
+            <div class="modal-header"><span>Tạo Tài Khoản Mới</span><i class="fa-solid fa-xmark" style="cursor:pointer;" onclick="closeModal('createUserModal')"></i></div>
+            <div class="modal-body">
+                <div class="form-group"><label>Username</label><input type="text" id="newUsername" class="form-control"></div>
+                <div class="form-group"><label>Mật khẩu</label><input type="text" id="newUserPass" class="form-control" value="123456"></div>
+                <div class="form-group"><label>Họ và tên</label><input type="text" id="newUserFullName" class="form-control"></div>
+                <div class="form-group">
+                    <label>Vai trò</label>
+                    <select id="newUserRole" class="form-control">
+                        <option value="STAFF">Nhân Viên (STAFF)</option>
+                        <option value="ADMIN">Quản Trị Viên (ADMIN)</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>Chi nhánh</label><select id="newUserBranch" class="form-control"></select></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="handleCreateUser()">Lưu User</button>
+                <button class="btn btn-secondary" onclick="closeModal('createUserModal')">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        App Tinh Gọn — Hệ Thống Kiểm Soát Date Siêu Thị<br>
+        <strong>AS Mart & THA Group — Chuyển Đổi Số Thực Chiến</strong>
+    </footer>
+
+    <!-- ================= JAVASCRIPT ENGINE ================= -->
+    <script>
+        const TENANT_REGISTRY = {
+            "asmart": "https://script.google.com/macros/s/AKfycbwtP6JnAdPEh0RkKE_SNwtrz7SMQdrxZi37x4csKvv3Vl-t7YWFDv2td9odyCJNNkKN/exec",
+            "thagroup": "", 
+            "tunganh": "",
+            "congty_moi": ""
+        };
+
+        let CURRENT_SCRIPT_URL = "";
+        let CURRENT_USER = null;
+        let LOCAL_PRODUCTS = new Map();
+        let BOOTSTRAP_DATA = { counters: [], categories: [], actionTemplates: [] };
+        
+        let STAFF_LIVE_DATE_ITEMS = [];
+        let LIVE_PRINT_ITEMS = JSON.parse(localStorage.getItem('temp_print_tags') || '[]');
+        let html5QrCode = null;
+        let printQrCode = null;
+        let TORCH_ON = false;
+        let LAST_SCAN_TIME = 0;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initTheme();
+            checkAutoLogin();
+            bindBarcodeEnter();
+        });
+
+        function initTheme() {
+            const theme = localStorage.getItem('app_theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+        }
+        function toggleTheme() {
+            const cur = document.documentElement.getAttribute('data-theme');
+            const next = cur === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('app_theme', next);
+        }
+
+        function checkAutoLogin() {
+            const saved = localStorage.getItem('date_app_session');
+            if (saved) {
+                const session = JSON.parse(saved);
+                CURRENT_SCRIPT_URL = session.scriptUrl;
+                CURRENT_USER = session.user;
+                renderAppByRole();
+            }
+        }
+
+        async function handleLogin() {
+            const tenant = document.getElementById('loginTenantCode').value.trim().toLowerCase();
+            const u = document.getElementById('loginUsername').value.trim();
+            const p = document.getElementById('loginPassword').value.trim();
+
+            if (!tenant || !u || !p) return showToast("Vui lòng điền đủ thông tin!");
+            CURRENT_SCRIPT_URL = TENANT_REGISTRY[tenant];
+            if (!CURRENT_SCRIPT_URL) return showToast("Mã Doanh Nghiệp chưa được thiết lập URL!");
+
+            showLoading("Đang xác thực thông tin đăng nhập...", "Kiểm tra quyền truy cập hệ thống");
+            try {
+                const res = await fetch(CURRENT_SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'login', username: u, password: p })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    CURRENT_USER = data.user;
+                    CURRENT_USER.tenant = tenant;
+                    localStorage.setItem('date_app_session', JSON.stringify({ scriptUrl: CURRENT_SCRIPT_URL, user: CURRENT_USER }));
+                    renderAppByRole();
+                } else {
+                    hideLoading();
+                    showToast(data.message);
+                }
+            } catch (e) {
+                hideLoading();
+                showToast("Lỗi kết nối máy chủ Google Apps Script!");
+            }
+        }
+
+        async function renderAppByRole() {
+            document.getElementById('viewLogin').style.display = 'none';
+            document.getElementById('btnLogout').style.display = 'block';
+            document.getElementById('topTenantName').innerText = CURRENT_USER.tenant.toUpperCase();
+            document.getElementById('topSubInfo').innerText = `${CURRENT_USER.fullName} (${CURRENT_USER.role}) - ${CURRENT_USER.branch}`;
+
+            // Nạp cấu hình & dữ liệu sản phẩm
+            await loadBootstrapData();
+            renderPrintUtilityMarkup(); // Gắn module tiện ích in tem vào cả 2 bên
+
+            hideLoading();
+
+            if (CURRENT_USER.role === 'ADMIN') {
+                document.getElementById('viewAdmin').style.display = 'block';
+                loadAdminDashboardData();
+                loadAdminUsersAndBranches();
+            } else {
+                document.getElementById('viewStaff').style.display = 'block';
+                switchStaffTab('tabStaffPending');
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('date_app_session');
+            location.reload();
+        }
+
+        // ================= NẠP DỮ LIỆU & REFRESH =================
+        async function loadBootstrapData() {
+            showLoading("Đang nạp danh mục sản phẩm & cấu hình quầy...", "Đồng bộ bộ nhớ RAM client");
+            try {
+                const res = await fetch(`${CURRENT_SCRIPT_URL}?action=getBootstrapData&branchId=${encodeURIComponent(CURRENT_USER.branch)}`);
+                const data = await res.json();
+                if (data.success) {
+                    BOOTSTRAP_DATA = data.data;
+
+                    LOCAL_PRODUCTS.clear();
+                    BOOTSTRAP_DATA.products.forEach(p => LOCAL_PRODUCTS.set(p.maHang, p));
+
+                    populateDropdowns();
+                    populateActionTemplates();
+                    
+                    if (CURRENT_USER.role !== 'ADMIN') loadStaffPendingList();
+                }
+            } catch (e) { console.error("Lỗi nạp bootstrap:", e); }
+        }
+
+        function populateDropdowns() {
+            const sFilter = document.getElementById('staffFilterCounterSelect');
+            const sInput = document.getElementById('staffInputCounterSelect');
+            const sCat = document.getElementById('staffInputCategorySelect');
+
+            sFilter.innerHTML = '<option value="ALL">-- Tất cả quầy trong siêu thị --</option>';
+            sInput.innerHTML = '';
+            sCat.innerHTML = '';
+
+            BOOTSTRAP_DATA.counters.forEach(c => {
+                sFilter.add(new Option(c.name, c.code));
+                sInput.add(new Option(c.name, c.code));
+            });
+
+            BOOTSTRAP_DATA.categories.forEach(ct => {
+                sCat.add(new Option(ct.name, ct.code));
+            });
+        }
+
+        function populateActionTemplates() {
+            const dl = document.getElementById('actionTemplatesList');
+            dl.innerHTML = '';
+            BOOTSTRAP_DATA.actionTemplates.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t;
+                dl.appendChild(opt);
+            });
+        }
+
+        // ================= NHÂN VIÊN: HÀNG CẦN XỬ LÝ =================
+        async function loadStaffPendingList() {
+            const counter = document.getElementById('staffFilterCounterSelect').value || 'ALL';
+            showLoading("Đang nạp dữ liệu hàng date cần xử lý...", "Tải danh sách ngoài quầy");
+            try {
+                const res = await fetch(`${CURRENT_SCRIPT_URL}?action=getPendingDateRecords&branchId=${encodeURIComponent(CURRENT_USER.branch)}&counterId=${encodeURIComponent(counter)}`);
+                const data = await res.json();
+                hideLoading();
+
+                const container = document.getElementById('staffPendingContainer');
+                container.innerHTML = '';
+
+                if (!data.data || data.data.length === 0) {
+                    container.innerHTML = '<div style="text-align:center; padding:30px; color:var(--text-sub); font-size:13px;">Hiện tại quầy không có mã hàng nào cận date cần xử lý.</div>';
+                    return;
+                }
+
+                data.data.forEach(it => {
+                    const daysLeft = calculateDaysLeft(it.expDate);
+                    const badgeInfo = getWarningBadge(daysLeft);
+
+                    const div = document.createElement('div');
+                    div.className = `pending-card border-${badgeInfo.color}`;
+                    div.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
+                            <strong style="font-size:14px;">${it.tenHang}</strong>
+                            <span class="date-badge ${badgeInfo.class}">${badgeInfo.label} (${daysLeft} ngày)</span>
+                        </div>
+                        <div style="font-size:12px; color:var(--text-sub); margin-bottom:6px;">
+                            Mã: <strong>${it.maHang}</strong> | SL: <strong style="color:var(--danger); font-size:14px;">${it.sl}</strong> ${it.dvt} | HSD: <strong>${it.expDate}</strong>
+                        </div>
+                        <div style="background:var(--surface); border:1px dashed var(--border); border-radius:6px; padding:8px; margin-bottom:8px; font-size:12px;">
+                            <div style="font-weight:700; color:var(--primary); margin-bottom:2px;"><i class="fa-solid fa-bullhorn"></i> Hướng dẫn xử lý của Admin:</div>
+                            <div>${it.huongXuLy ? `<strong style="color:var(--danger);">${it.huongXuLy}</strong> (${it.adminChiDao || 'Admin'})` : '<i style="color:var(--text-sub);">Đang chờ quản lý đưa hướng xử lý...</i>'}</div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
+                            <button class="btn btn-success" style="font-size:11px; padding:6px 10px;" onclick="confirmStaffResolved('${it.id}')" ${it.trangThaiLam === 'DA_THUC_HIEN' ? 'disabled' : ''}>
+                                <i class="fa-solid fa-check"></i> ${it.trangThaiLam === 'DA_THUC_HIEN' ? 'Đã thực hiện xong' : 'Đã làm theo hướng dẫn'}
+                            </button>
+                            <button class="btn btn-secondary" style="font-size:11px; padding:6px 10px;" onclick="closeDateItem('${it.id}')">
+                                <i class="fa-solid fa-circle-check"></i> Đã bán hết / Đã hủy
+                            </button>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+            } catch (e) { hideLoading(); }
+        }
+
+        async function confirmStaffResolved(recordId) {
+            showLoading("Đang lưu trạng thái thực hiện...", "Cập nhật ngày giờ hoàn thành");
+            const res = await fetch(CURRENT_SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'staffConfirmResolved', recordId: recordId })
+            });
+            const data = await res.json();
+            hideLoading();
+            showToast(data.message);
+            loadStaffPendingList();
+        }
+
+        async function closeDateItem(recordId) {
+            const choice = prompt("Chọn kết quả đóng mã:\n1: Đã bán hết toàn bộ\n2: Có số lượng đem hủy\n(Nhập 1 hoặc 2):", "1");
+            if (!choice) return;
+
+            let resultText = "Đã bán hết";
+            let slHuy = 0;
+            if (choice === "2") {
+                slHuy = parseFloat(prompt("Nhập số lượng thực tế đem hủy:", "1")) || 0;
+                resultText = "Hủy bớt hàng cận date";
+            }
+
+            showLoading("Đang chốt mã hàng...", "Hoàn tất vòng đời bản ghi");
+            const res = await fetch(CURRENT_SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'closeDateRecord', recordId: recordId, result: resultText, slHuy: slHuy })
+            });
+            const data = await res.json();
+            hideLoading();
+            showToast(data.message);
+            loadStaffPendingList();
+        }
+
+        // ================= NHÂN VIÊN: QUÉT DATE MỚI & THÊM MÃ MỚI =================
+        function bindBarcodeEnter() {
+            document.getElementById('staffBarcodeInput').addEventListener('keypress', e => {
+                if (e.key === 'Enter') handleBarcodeLookup();
+            });
+        }
+
+        function handleBarcodeLookup() {
+            const code = document.getElementById('staffBarcodeInput').value.trim();
+            if (!code) return;
+
+            if (LOCAL_PRODUCTS.has(code)) {
+                playFeedback('success');
+                document.getElementById('staffExpDateInput').focus();
+            } else {
+                playFeedback('error');
+                // Bật Modal yêu cầu nhập Tên & ĐVT, gán quầy và nhóm mặc định
+                const cSelect = document.getElementById('staffInputCounterSelect');
+                const catSelect = document.getElementById('staffInputCategorySelect');
+
+                document.getElementById('quickAddBarcode').value = code;
+                document.getElementById('quickAddName').value = '';
+                document.getElementById('quickAddDvt').value = 'Gói';
+                document.getElementById('quickAddCounter').value = cSelect.options[cSelect.selectedIndex]?.text || '';
+                document.getElementById('quickAddCategory').value = catSelect.options[catSelect.selectedIndex]?.text || '';
+                
+                document.getElementById('quickAddProductModal').style.display = 'flex';
+                document.getElementById('quickAddName').focus();
+            }
+        }
+
+        async function handleConfirmQuickAddProduct() {
+            const code = document.getElementById('quickAddBarcode').value.trim();
+            const name = document.getElementById('quickAddName').value.trim();
+            const dvt = document.getElementById('quickAddDvt').value.trim() || 'Cái';
+            const quay = document.getElementById('staffInputCounterSelect').value;
+            const nhom = document.getElementById('staffInputCategorySelect').value;
+
+            if (!name) return showToast("Vui lòng nhập tên hàng hóa!");
+
+            showLoading("Đang lưu mã mới vào cơ sở dữ liệu...", "Đồng bộ toàn công ty");
+            const res = await fetch(CURRENT_SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'quickAddProduct', maHang: code, tenHang: name, dvt: dvt, maQuay: quay, nhomHang: nhom, creator: CURRENT_USER.fullName })
+            });
+            const data = await res.json();
+            hideLoading();
+
+            // Cập nhật bộ nhớ RAM Client tức thì
+            LOCAL_PRODUCTS.set(code, { maHang: code, tenHang: name, dvt: dvt, maQuay: quay, nhomHang: nhom });
+            closeModal('quickAddProductModal');
+            showToast("Đã bổ sung mã mới vào cơ sở dữ liệu!");
+            document.getElementById('staffExpDateInput').focus();
+        }
+
+        function handleAddStaffDateItem() {
+            const code = document.getElementById('staffBarcodeInput').value.trim();
+            const qty = parseFloat(document.getElementById('staffQtyInput').value) || 0;
+            const exp = document.getElementById('staffExpDateInput').value;
+
+            if (!code) return showToast("Vui lòng nhập mã vạch!");
+            
+            // Nếu mã chưa có trong cơ sở dữ liệu thì chặn lại bắt nhập tên trước
+            if (!LOCAL_PRODUCTS.has(code)) {
+                handleBarcodeLookup();
+                return;
+            }
+
+            if (qty <= 0) return showToast("Số lượng phải lớn hơn 0!");
+            if (!exp) return showToast("Vui lòng chọn Hạn sử dụng!");
+
+            const p = LOCAL_PRODUCTS.get(code);
+
+            STAFF_LIVE_DATE_ITEMS.unshift({
+                maHang: p.maHang,
+                tenHang: p.tenHang,
+                dvt: p.dvt,
+                sl: qty,
+                expDate: exp
+            });
+
+            renderLiveDateTable();
+            document.getElementById('staffBarcodeInput').value = '';
+            document.getElementById('staffQtyInput').value = '1';
+            document.getElementById('staffBarcodeInput').focus();
+        }
+
+        function renderLiveDateTable() {
+            const tbody = document.getElementById('liveDateTableBody');
+            tbody.innerHTML = '';
+            STAFF_LIVE_DATE_ITEMS.forEach((it, idx) => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${idx + 1}</td>
+                    <td><strong>${it.maHang}</strong></td>
+                    <td>${it.tenHang}</td>
+                    <td><span style="color:var(--danger); font-weight:bold;">${it.expDate}</span></td>
+                    <td><strong>${it.sl}</strong> ${it.dvt}</td>
+                    <td><i class="fa-solid fa-trash" style="color:var(--danger); cursor:pointer;" onclick="STAFF_LIVE_DATE_ITEMS.splice(${idx},1); renderLiveDateTable();"></i></td>
+                `;
+            });
+            document.getElementById('liveDateCount').innerText = STAFF_LIVE_DATE_ITEMS.length;
+        }
+
+        function clearLiveDateTable() {
+            if (confirm("Xóa toàn bộ danh sách vừa quét?")) {
+                STAFF_LIVE_DATE_ITEMS = [];
+                renderLiveDateTable();
+            }
+        }
+
+        // BẬT POPUP XÁC NHẬN TRƯỚC KHI LƯU
+        function openConfirmSaveModal() {
+            if (STAFF_LIVE_DATE_ITEMS.length === 0) return showToast("Chưa có mã hàng nào trong bảng!");
+
+            const tbody = document.getElementById('confirmBatchBody');
+            tbody.innerHTML = '';
+            STAFF_LIVE_DATE_ITEMS.forEach(it => {
+                const row = tbody.insertRow();
+                row.innerHTML = `<td>${it.maHang}</td><td>${it.tenHang}</td><td><strong>${it.sl}</strong> ${it.dvt}</td><td>${it.expDate}</td>`;
+            });
+
+            document.getElementById('confirmBatchCount').innerText = STAFF_LIVE_DATE_ITEMS.length;
+            document.getElementById('confirmSaveBatchModal').style.display = 'flex';
+        }
+
+        async function executeSaveDateBatch() {
+            closeModal('confirmSaveBatchModal');
+            const quay = document.getElementById('staffInputCounterSelect').value;
+            const nhom = document.getElementById('staffInputCategorySelect').value;
+
+            showLoading("Đang ghi nhận hàng date lên Server...", "Lưu vào cơ sở dữ liệu");
+            const res = await fetch(CURRENT_SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({
+                    action: 'saveDateBatch',
+                    branchId: CURRENT_USER.branch,
+                    counterId: quay,
+                    categoryId: nhom,
+                    staffName: CURRENT_USER.fullName,
+                    items: STAFF_LIVE_DATE_ITEMS
+                })
+            });
+            const data = await res.json();
+            hideLoading();
+            showToast(data.message);
+            if (data.success) {
+                STAFF_LIVE_DATE_ITEMS = [];
+                renderLiveDateTable();
+            }
+        }
+
+        // ================= MODULE TIỆN ÍCH IN TEM CHUNG =================
+        function renderPrintUtilityMarkup() {
+            const markup = `
+                <div class="card">
+                    <h3 style="font-size:14px; margin-bottom:8px; color:var(--primary);"><i class="fa-solid fa-print"></i> Bắn Tem Hàng Bổ Sung</h3>
+                    <p style="font-size:12px; color:var(--text-sub); margin-bottom:12px;">Mở camera quét liên tục tem giá thiếu (3 giây/mã). Kết thúc tải file TXT chuẩn gửi in.</p>
+                    
+                    <button class="btn btn-primary btn-block" style="margin-bottom:10px;" onclick="togglePrintScannerUI()">
+                        <i class="fa-solid fa-camera"></i> <span class="btnPrintCamText">Bật Camera Bắn Tem</span>
+                    </button>
+
+                    <div class="printScannerWrapper scanner-box" style="margin-bottom:10px;">
+                        <div id="qr-print-reader"></div>
+                    </div>
+
+                    <div class="table-wrap" style="max-height:220px;">
+                        <table>
+                            <thead><tr><th>STT</th><th>MÃ HÀNG</th><th>TÊN HÀNG</th><th>SL</th><th>XÓA</th></tr></thead>
+                            <tbody class="livePrintTableBody"></tbody>
+                        </table>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-top:10px;">
+                        <button class="btn btn-success" onclick="exportPrintTagsText()"><i class="fa-solid fa-file-arrow-down"></i> Tải File (.txt)</button>
+                        <button class="btn btn-secondary" onclick="clearLivePrintTable()">Xóa Bảng Tem</button>
+                    </div>
+                </div>
+            `;
+            document.getElementById('staffPrintContainer').innerHTML = markup;
+            document.getElementById('adminPrintContainer').innerHTML = markup;
+            renderLivePrintTable();
+        }
+
+        function togglePrintScannerUI() {
+            const wrappers = document.querySelectorAll('.printScannerWrapper');
+            const btns = document.querySelectorAll('.btnPrintCamText');
+            const isShown = wrappers[0].style.display === 'block';
+
+            if (isShown) {
+                if (printQrCode) {
+                    printQrCode.stop().then(() => {
+                        printQrCode.clear();
+                        wrappers.forEach(w => w.style.display = 'none');
+                        btns.forEach(b => b.innerText = "Bật Camera Bắn Tem");
+                    });
+                }
+            } else {
+                wrappers.forEach(w => w.style.display = 'block');
+                btns.forEach(b => b.innerText = "Tắt Camera Bắn Tem");
+                printQrCode = new Html5Qrcode("qr-print-reader");
+                const config = { fps: 15, qrbox: { width: 280, height: 120 } };
+
+                printQrCode.start({ facingMode: "environment" }, config, (decodedText) => {
+                    const now = Date.now();
+                    if (now - LAST_SCAN_TIME < 3000) return; // 3 giây nhận 1 mã
+                    LAST_SCAN_TIME = now;
+
+                    const code = decodedText.trim();
+                    const p = LOCAL_PRODUCTS.get(code) || { maHang: code, tenHang: 'Chưa có tên' };
+                    
+                    LIVE_PRINT_ITEMS.unshift({ maHang: code, tenHang: p.tenHang, sl: 1 });
+                    localStorage.setItem('temp_print_tags', JSON.stringify(LIVE_PRINT_ITEMS));
+                    renderLivePrintTable();
+                    playFeedback('success');
+                }).catch(() => showToast("Không thể khởi động camera!"));
+            }
+        }
+
+        function renderLivePrintTable() {
+            document.querySelectorAll('.livePrintTableBody').forEach(tbody => {
+                tbody.innerHTML = '';
+                LIVE_PRINT_ITEMS.forEach((it, idx) => {
+                    const row = tbody.insertRow();
+                    row.innerHTML = `
+                        <td>${idx + 1}</td>
+                        <td><strong>${it.maHang}</strong></td>
+                        <td>${it.tenHang}</td>
+                        <td><strong>${it.sl}</strong></td>
+                        <td><i class="fa-solid fa-trash" style="color:var(--danger); cursor:pointer;" onclick="LIVE_PRINT_ITEMS.splice(${idx},1); localStorage.setItem('temp_print_tags', JSON.stringify(LIVE_PRINT_ITEMS)); renderLivePrintTable();"></i></td>
+                    `;
+                });
+            });
+        }
+
+        function clearLivePrintTable() {
+            if (confirm("Xóa toàn bộ dữ liệu bắn tem hiện tại?")) {
+                LIVE_PRINT_ITEMS = [];
+                localStorage.removeItem('temp_print_tags');
+                renderLivePrintTable();
+            }
+        }
+
+        function exportPrintTagsText() {
+            if (LIVE_PRINT_ITEMS.length === 0) return showToast("Chưa có dữ liệu bắn tem!");
+            let content = "";
+            LIVE_PRINT_ITEMS.forEach(it => { content += `${it.maHang},1\n`; });
+
+            const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `InTem_${new Date().getTime()}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast("Đã tải file in tem .txt thành công!");
+        }
+
+        // ================= ADMIN: DASHBOARD & CẤU HÌNH =================
+        async function loadAdminDashboardData() {
+            const branch = document.getElementById('adminBranchFilter').value || (CURRENT_USER.branch === 'ALL' ? '' : CURRENT_USER.branch);
+            showLoading("Đang tải dữ liệu Dashboard...", "Tổng hợp cảnh báo toàn hệ thống");
+            try {
+                const res = await fetch(`${CURRENT_SCRIPT_URL}?action=getAdminDashboard&branchId=${encodeURIComponent(branch)}`);
+                const data = await res.json();
+                hideLoading();
+
+                let red = 0, orange = 0, pending = 0;
+                const tbody = document.getElementById('adminDashboardTableBody');
+                tbody.innerHTML = '';
+
+                data.data.forEach(it => {
+                    const daysLeft = calculateDaysLeft(it.expDate);
+                    const b = getWarningBadge(daysLeft);
+
+                    if (daysLeft <= 7) red++;
+                    else if (daysLeft <= 15) orange++;
+                    if (!it.huongXuLy) pending++;
+
+                    const row = tbody.insertRow();
+                    row.innerHTML = `
+                        <td><span class="date-badge ${b.class}">${b.label} (${daysLeft}n)</span></td>
+                        <td><strong>${it.maHang}</strong></td>
+                        <td>${it.tenHang}</td>
+                        <td><strong style="color:var(--danger);">${it.sl}</strong> ${it.dvt}</td>
+                        <td>${it.expDate}</td>
+                        <td>${it.counter}</td>
+                        <td>
+                            <input type="text" list="actionTemplatesList" class="form-control" style="font-size:12px; padding:4px 8px;" id="instruct_${it.id}" value="${it.huongXuLy || ''}" placeholder="Gõ hoặc chọn phương án...">
+                        </td>
+                        <td>${it.trangThaiLam === 'DA_THUC_HIEN' ? '<span style="color:var(--success); font-weight:bold;"><i class="fa-solid fa-check-double"></i> Đã làm</span>' : '<span style="color:var(--text-sub);">Chưa làm</span>'}</td>
+                        <td>
+                            <button class="btn btn-primary" style="font-size:11px; padding:4px 8px;" onclick="handleAdminSaveInstruction('${it.id}')"><i class="fa-solid fa-floppy-disk"></i> Lưu</button>
+                        </td>
+                    `;
+                });
+
+                document.getElementById('kpiTotal').innerText = data.data.length;
+                document.getElementById('kpiRed').innerText = red;
+                document.getElementById('kpiOrange').innerText = orange;
+                document.getElementById('kpiPendingInstruct').innerText = pending;
+            } catch (e) { hideLoading(); }
+        }
+
+        async function handleAdminSaveInstruction(recordId) {
+            const val = document.getElementById(`instruct_${recordId}`).value.trim();
+            if (!val) return showToast("Vui lòng nhập chỉ đạo xử lý!");
+
+            showLoading("Đang lưu hướng xử lý...", "Cập nhật dữ liệu");
+            const res = await fetch(CURRENT_SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'adminUpdateInstruction', recordId: recordId, instruction: val, adminName: CURRENT_USER.fullName })
+            });
+            const data = await res.json();
+            hideLoading();
+            showToast(data.message);
+            loadBootstrapData();
+        }
+
+        function handleUploadCatalogFile() {
+            const file = document.getElementById('catalogFileInput').files[0];
+            if (!file) return showToast("Vui lòng chọn file Excel danh mục!");
+
+            showLoading("Đang đọc dữ liệu file Excel...", "Xử lý bảng tính");
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+
+                if (jsonData.length === 0) { hideLoading(); return showToast("File không có dữ liệu!"); }
+
+                showLoading(`Đang nạp ${jsonData.length} dòng lên Server...`, "Tự động ghi đè mã trùng");
+                const res = await fetch(CURRENT_SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'uploadProductCatalog', items: jsonData, adminUser: CURRENT_USER.fullName })
+                });
+                const data = await res.json();
+                hideLoading();
+                showToast(data.message);
+                loadBootstrapData();
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        async function handleDownloadCatalog() {
+            showLoading("Đang tải danh mục từ Server...", "Xuất dữ liệu Excel");
+            const res = await fetch(`${CURRENT_SCRIPT_URL}?action=exportProductCatalog`);
+            const data = await res.json();
+            hideLoading();
+
+            if (data.success) {
+                const ws = XLSX.utils.json_to_sheet(data.data);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "DanhMucHangHoa");
+                XLSX.writeFile(wb, `DanhMuc_${CURRENT_USER.tenant}_${new Date().getTime()}.xlsx`);
+            }
+        }
+
+        async function handleSaveConfigItem() {
+            const type = document.getElementById('configTypeSelect').value;
+            const code = document.getElementById('configCodeInput').value.trim();
+            const name = document.getElementById('configNameInput').value.trim();
+            if (!code || !name) return showToast("Nhập đủ Mã và Tên!");
+
+            showLoading("Đang lưu cấu hình...", "Đồng bộ hệ thống");
+            const res = await fetch(CURRENT_SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'saveConfigItem', type: type, code: code, name: name })
+            });
+            const data = await res.json();
+            hideLoading();
+            showToast(data.message);
+            loadBootstrapData();
+        }
+
+        async function loadAdminUsersAndBranches() {
+            try {
+                const res = await fetch(`${CURRENT_SCRIPT_URL}?action=getUsersAndBranches`);
+                const data = await res.json();
+                if (data.success) {
+                    const uBranchSel = document.getElementById('newUserBranch');
+                    const bFilter = document.getElementById('adminBranchFilter');
+                    const rBranchSel = document.getElementById('reportBranchSelect');
+
+                    uBranchSel.innerHTML = '<option value="ALL">Tất cả chi nhánh</option>';
+                    bFilter.innerHTML = '<option value="ALL">Tất cả chi nhánh</option>';
+                    rBranchSel.innerHTML = '<option value="ALL">Tất cả chi nhánh</option>';
+
+                    data.branches.forEach(b => {
+                        uBranchSel.add(new Option(b.name, b.code));
+                        bFilter.add(new Option(b.name, b.code));
+                        rBranchSel.add(new Option(b.name, b.code));
+                    });
+
+                    const uBody = document.getElementById('userListBody');
+                    uBody.innerHTML = '';
+                    data.users.forEach(u => {
+                        const row = uBody.insertRow();
+                        row.innerHTML = `<td><strong>${u.username}</strong></td><td>${u.fullName}</td><td>${u.role}</td><td>${u.branch}</td>`;
+                    });
+                }
+            } catch (e) {}
+        }
+
+        async function handleCreateUser() {
+            const u = document.getElementById('newUsername').value.trim();
+            const p = document.getElementById('newUserPass').value.trim();
+            const fn = document.getElementById('newUserFullName').value.trim();
+            const r = document.getElementById('newUserRole').value;
+            const b = document.getElementById('newUserBranch').value;
+
+            if (!u || !p || !fn) return showToast("Điền đủ thông tin User!");
+            showLoading("Đang tạo User...", "Lưu vào cơ sở dữ liệu");
+            const res = await fetch(CURRENT_SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'saveUser', username: u, password: p, fullName: fn, role: r, branch: b })
+            });
+            const data = await res.json();
+            hideLoading();
+            showToast(data.message);
+            closeModal('createUserModal');
+            loadAdminUsersAndBranches();
+        }
+
+        let REPORT_CACHE_DATA = [];
+        async function handleRunDateReport() {
+            const fDate = document.getElementById('reportFromDate').value;
+            const tDate = document.getElementById('reportToDate').value;
+            const br = document.getElementById('reportBranchSelect').value;
+
+            showLoading("Đang tổng hợp báo cáo...", "Truy xuất lịch sử rà soát");
+            const res = await fetch(`${CURRENT_SCRIPT_URL}?action=getDateReport&fromDate=${fDate}&toDate=${tDate}&branchId=${br}&counterId=ALL&catId=ALL`);
+            const data = await res.json();
+            hideLoading();
+
+            REPORT_CACHE_DATA = data.data || [];
+            const tbody = document.getElementById('adminReportTableBody');
+            tbody.innerHTML = '';
+
+            REPORT_CACHE_DATA.forEach(r => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td><strong>${r.maHang}</strong></td>
+                    <td>${r.tenHang}</td>
+                    <td>${r.sl} ${r.dvt}</td>
+                    <td>${r.expDate}</td>
+                    <td>${r.staffQuet} <br><small style="color:var(--text-sub);">${r.timeQuet}</small></td>
+                    <td>${r.huongXuLy || '<i>Chưa có</i>'} <br><small style="color:var(--text-sub);">${r.timeChiDao}</small></td>
+                    <td>${r.trangThaiLam === 'DA_THUC_HIEN' ? '<span style="color:var(--success);">Đã làm</span>' : '<span style="color:var(--danger);">Chưa</span>'} <br><small style="color:var(--text-sub);">${r.timeLam}</small></td>
+                    <td>${r.trangThaiCuoi === 'HOAN_THANH' ? `<strong style="color:var(--success);">${r.ketQuaCuoi} (Hủy: ${r.slHuy})</strong>` : 'Đang theo dõi'}</td>
+                `;
+            });
+        }
+
+        function exportReportExcel() {
+            if (REPORT_CACHE_DATA.length === 0) return showToast("Chưa có dữ liệu báo cáo!");
+            const ws = XLSX.utils.json_to_sheet(REPORT_CACHE_DATA);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "BaoCaoDate");
+            XLSX.writeFile(wb, `BaoCao_Date_${new Date().getTime()}.xlsx`);
+        }
+
+        // ================= TIỆN ÍCH CHUNG =================
+        function calculateDaysLeft(expDateStr) {
+            if (!expDateStr) return 999;
+            const exp = new Date(expDateStr);
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            exp.setHours(0,0,0,0);
+            return Math.ceil((exp - today) / (1000 * 60 * 60 * 24));
+        }
+
+        function getWarningBadge(days) {
+            if (days <= 7) return { color: 'red', class: 'badge-red', label: 'BÁO ĐỎ' };
+            if (days <= 15) return { color: 'orange', class: 'badge-orange', label: 'BÁO CAM' };
+            if (days <= 30) return { color: 'yellow', class: 'badge-yellow', label: 'CẬN DATE' };
+            return { color: 'green', class: 'badge-green', label: 'AN TOÀN' };
+        }
+
+        function switchStaffTab(tabId) {
+            document.querySelectorAll('.staff-tab-content').forEach(c => c.style.display = 'none');
+            document.querySelectorAll('#viewStaff .tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabId).style.display = 'block';
+            event.currentTarget.classList.add('active');
+        }
+
+        function switchAdminTab(tabId) {
+            document.querySelectorAll('.admin-tab-content').forEach(c => c.style.display = 'none');
+            document.querySelectorAll('#viewAdmin .tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabId).style.display = 'block';
+            event.currentTarget.classList.add('active');
+        }
+
+        function toggleCameraUI() {
+            const wrap = document.getElementById('scannerWrapper');
+            if (wrap.style.display === 'block') { stopScanner(); }
+            else { startScanner(); }
+        }
+
+        function startScanner() {
+            document.getElementById('scannerWrapper').style.display = 'block';
+            document.getElementById('btnCamText').innerText = "Tắt Camera";
+            html5QrCode = new Html5Qrcode("qr-reader");
+            const config = { fps: 15, qrbox: { width: 280, height: 120 } };
+
+            html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
+                document.getElementById('staffBarcodeInput').value = decodedText.trim();
+                stopScanner();
+                handleBarcodeLookup();
+            }).catch(() => showToast("Không bật được camera!"));
+        }
+
+        function stopScanner() {
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    html5QrCode.clear();
+                    document.getElementById('scannerWrapper').style.display = 'none';
+                    document.getElementById('btnCamText').innerText = "Mở Camera";
+                }).catch(() => {});
+            }
+        }
+
+        async function toggleTorch() {
+            if (!html5QrCode) return showToast("Camera chưa bật!");
+            try {
+                await html5QrCode.applyVideoConstraints({ advanced: [{ torch: !TORCH_ON }] });
+                TORCH_ON = !TORCH_ON;
+            } catch (e) { showToast("Thiết bị không hỗ trợ Flash!"); }
+        }
+
+        function playFeedback(type) {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                osc.connect(ctx.destination);
+                osc.frequency.value = (type === 'success') ? 1200 : 350;
+                osc.start();
+                osc.stop(ctx.currentTime + 0.1);
+                if (navigator.vibrate) navigator.vibrate(type === 'success' ? 80 : [100, 50, 100]);
+            } catch (e) {}
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.style.display = 'block';
+            setTimeout(() => t.style.display = 'none', 3000);
+        }
+        function showLoading(msg, subMsg) {
+            document.getElementById('loadingMsg').innerText = msg || "Đang tải dữ liệu...";
+            document.getElementById('loadingSubMsg').innerText = subMsg || "Vui lòng chờ trong giây lát";
+            document.getElementById('loadingOverlay').style.display = 'flex';
+        }
+        function hideLoading() { document.getElementById('loadingOverlay').style.display = 'none'; }
+        function openCreateUserModal() { document.getElementById('createUserModal').style.display = 'flex'; }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    </script>
+</body>
+</html>
