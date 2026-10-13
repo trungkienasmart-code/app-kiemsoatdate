@@ -775,35 +775,89 @@
         }
 
         // ================= NHÂN VIÊN: QUÉT DATE MỚI & THÊM MÃ MỚI =================
-        function bindBarcodeEnter() {
-            document.getElementById('staffBarcodeInput').addEventListener('keypress', e => {
-                if (e.key === 'Enter') handleBarcodeLookup();
-            });
+      function bindBarcodeEnter() {
+    const input = document.getElementById('staffBarcodeInput');
+    const resultsBox = document.getElementById('barcodeSearchResults');
+    let searchTimeout = null;
+
+    // 1. Lắng nghe sự kiện gõ phím Enter (dành cho máy quét mã vạch hoặc gõ xong bấm Enter)
+    input.addEventListener('keypress', e => {
+        if (e.key === 'Enter') {
+            resultsBox.style.display = 'none';
+            handleBarcodeLookup();
+        }
+    });
+
+    // 2. Lắng nghe sự kiện gõ chữ để tìm kiếm gợi ý (Debounce 300ms để không lag máy)
+    input.addEventListener('input', function(e) {
+        const query = this.value.trim().toLowerCase();
+        clearTimeout(searchTimeout);
+        
+        if (query.length === 0) {
+            resultsBox.style.display = 'none';
+            return;
         }
 
-        function handleBarcodeLookup() {
-            const code = document.getElementById('staffBarcodeInput').value.trim();
-            if (!code) return;
+        searchTimeout = setTimeout(() => {
+            performProductSearch(query);
+        }, 300);
+    });
 
-            if (LOCAL_PRODUCTS.has(code)) {
-                playFeedback('success');
-                document.getElementById('staffExpDateInput').focus();
-            } else {
-                playFeedback('error');
-                // Bật Modal yêu cầu nhập Tên & ĐVT, gán quầy và nhóm mặc định
-                const cSelect = document.getElementById('staffInputCounterSelect');
-                const catSelect = document.getElementById('staffInputCategorySelect');
-
-                document.getElementById('quickAddBarcode').value = code;
-                document.getElementById('quickAddName').value = '';
-                document.getElementById('quickAddDvt').value = 'Gói';
-                document.getElementById('quickAddCounter').value = cSelect.options[cSelect.selectedIndex]?.text || '';
-                document.getElementById('quickAddCategory').value = catSelect.options[catSelect.selectedIndex]?.text || '';
-                
-                document.getElementById('quickAddProductModal').style.display = 'flex';
-                document.getElementById('quickAddName').focus();
-            }
+    // 3. Đóng khung gợi ý khi bấm ra ngoài
+    document.addEventListener('click', function(e) {
+        if (e.target !== input && !resultsBox.contains(e.target)) {
+            resultsBox.style.display = 'none';
         }
+    });
+}
+
+// Hàm tìm kiếm và hiển thị gợi ý
+function performProductSearch(query) {
+    const resultsBox = document.getElementById('barcodeSearchResults');
+    resultsBox.innerHTML = '';
+    let matches = [];
+    
+    // Quét qua danh sách sản phẩm trong bộ nhớ RAM
+    for (let [key, p] of LOCAL_PRODUCTS) {
+        const maHang = key.toLowerCase();
+        const tenHang = (p.tenHang || '').toLowerCase();
+        
+        // Tìm theo Mã hàng HOẶC Tên hàng
+        if (maHang.includes(query) || tenHang.includes(query)) {
+            matches.push(p);
+        }
+        // Giới hạn 30 kết quả để giao diện không bị quá tải
+        if (matches.length >= 30) break; 
+    }
+
+    if (matches.length === 0) {
+        resultsBox.style.display = 'none';
+        return;
+    }
+
+    // Render danh sách gợi ý
+    matches.forEach(p => {
+        const div = document.createElement('div');
+        div.className = 'autocomplete-item';
+        
+        div.innerHTML = `
+            <strong>${p.maHang}</strong> | ${p.tenHang || 'Chưa có tên'} 
+            <small>ĐVT: ${p.dvt || '-'} | Quầy: ${p.maQuay || '-'}</small>
+        `;
+        
+        // Khi người dùng chọn 1 gợi ý
+        div.onclick = function() {
+            document.getElementById('staffBarcodeInput').value = p.maHang;
+            resultsBox.style.display = 'none';
+            playFeedback('success');
+            handleBarcodeLookup(); // Tự động kiểm tra và chuyển sang ô nhập HSD
+        };
+        
+        resultsBox.appendChild(div);
+    });
+    
+    resultsBox.style.display = 'block';
+}
 
         async function handleConfirmQuickAddProduct() {
             const code = document.getElementById('quickAddBarcode').value.trim();
