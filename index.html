@@ -643,24 +643,58 @@
         }
 
         // ================= NẠP DỮ LIỆU & REFRESH =================
-        async function loadBootstrapData() {
-            showLoading("Đang nạp danh mục sản phẩm & cấu hình quầy...", "Đồng bộ bộ nhớ RAM client");
-            try {
-                const res = await fetch(`${CURRENT_SCRIPT_URL}?action=getBootstrapData&branchId=${encodeURIComponent(CURRENT_USER.branch)}`);
-                const data = await res.json();
-                if (data.success) {
-                    BOOTSTRAP_DATA = data.data;
+async function loadBootstrapData() {
+    // 1. Kiểm tra cache danh mục trong localStorage
+    const cachedProducts = localStorage.getItem('cache_products_' + CURRENT_USER.tenant);
+    const cacheTime = localStorage.getItem('cache_products_time_' + CURRENT_USER.tenant);
+    const ONE_DAY = 24 * 60 * 60 * 1000;
 
-                    LOCAL_PRODUCTS.clear();
-                    BOOTSTRAP_DATA.products.forEach(p => LOCAL_PRODUCTS.set(p.maHang, p));
+    let needFetchProducts = true;
+    if (cachedProducts && cacheTime && (Date.now() - parseInt(cacheTime) < ONE_DAY)) {
+        try {
+            const list = JSON.parse(cachedProducts);
+            LOCAL_PRODUCTS.clear();
+            list.forEach(p => LOCAL_PRODUCTS.set(p.maHang, p));
+            needFetchProducts = false;
+        } catch(e) { needFetchProducts = true; }
+    }
 
-                    populateDropdowns();
-                    populateActionTemplates();
-                    
-                    if (CURRENT_USER.role !== 'ADMIN') loadStaffPendingList();
+    showLoading("Đang nạp cấu hình hệ thống...", "Đồng bộ dữ liệu");
+
+    try {
+        // Gửi tham số skipProducts nếu máy client đã có sẵn danh mục
+        const url = `${CURRENT_SCRIPT_URL}?action=getBootstrapData&branchId=${encodeURIComponent(CURRENT_USER.branch)}&skipProducts=${!needFetchProducts}`;
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (data.success) {
+            BOOTSTRAP_DATA.counters = data.data.counters;
+            BOOTSTRAP_DATA.categories = data.data.categories;
+            BOOTSTRAP_DATA.actionTemplates = data.data.actionTemplates;
+
+            // Nếu server gửi về products mới (chưa có cache)
+            if (data.data.products && data.data.products.length > 0) {
+                LOCAL_PRODUCTS.clear();
+                data.data.products.forEach(p => LOCAL_PRODUCTS.set(p.maHang, p));
+                try {
+                    localStorage.setItem('cache_products_' + CURRENT_USER.tenant, JSON.stringify(data.data.products));
+                    localStorage.setItem('cache_products_time_' + CURRENT_USER.tenant, Date.now().toString());
+                } catch(e) {
+                    console.warn("Dữ liệu quá dung lượng localStorage, chỉ lưu trên RAM");
                 }
-            } catch (e) { console.error("Lỗi nạp bootstrap:", e); }
+            }
+
+            populateDropdowns();
+            populateActionTemplates();
+
+            if (CURRENT_USER.role !== 'ADMIN') loadStaffPendingList();
         }
+    } catch (e) {
+        console.error("Lỗi nạp bootstrap:", e);
+    } finally {
+        hideLoading();
+    }
+}
 
         function populateDropdowns() {
             const sFilter = document.getElementById('staffFilterCounterSelect');
@@ -740,17 +774,32 @@
             } catch (e) { hideLoading(); }
         }
 
-        async function confirmStaffResolved(recordId) {
-            showLoading("Đang lưu trạng thái thực hiện...", "Cập nhật ngày giờ hoàn thành");
-            const res = await fetch(CURRENT_SCRIPT_URL, {
-                method: 'POST',
-                body: JSON.stringify({ action: 'staffConfirmResolved', recordId: recordId })
-            });
-            const data = await res.json();
-            hideLoading();
+async function confirmStaffResolved(recordId) {
+    const btn = event.currentTarget;
+    btn.disabled = true;
+    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang lưu...`;
+
+    try {
+        const res = await fetch(CURRENT_SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'staffConfirmResolved', recordId: recordId })
+        });
+        const data = await res.json();
+        if (data.success) {
             showToast(data.message);
-            loadStaffPendingList();
+            btn.className = "btn btn-success";
+            btn.innerHTML = `<i class="fa-solid fa-check-double"></i> Đã thực hiện xong`;
+        } else {
+            showToast(data.message);
+            btn.disabled = false;
+            btn.innerHTML = `<i class="fa-solid fa-check"></i> Đã làm theo hướng dẫn`;
         }
+    } catch (e) {
+        showToast("Lỗi kết nối!");
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-check"></i> Đã làm theo hướng dẫn`;
+    }
+}
 
         async function closeDateItem(recordId) {
             const choice = prompt("Chọn kết quả đóng mã:\n1: Đã bán hết toàn bộ\n2: Có số lượng đem hủy\n(Nhập 1 hoặc 2):", "1");
@@ -1133,20 +1182,52 @@ function performProductSearch(query) {
             } catch (e) { hideLoading(); }
         }
 
-        async function handleAdminSaveInstruction(recordId) {
-            const val = document.getElementById(`instruct_${recordId}`).value.trim();
-            if (!val) return showToast("Vui lòng nhập chỉ đạo xử lý!");
+async function handleAdminSaveInstruction(recordId) {
+    const inputEl = document.getElementById(`instruct_${recordId}`);
+    const val = inputEl.value.trim();
+    if (!val) return showToast("Vui lòng nhập chỉ đạo xử lý!");
 
-            showLoading("Đang lưu hướng xử lý...", "Cập nhật dữ liệu");
-            const res = await fetch(CURRENT_SCRIPT_URL, {
-                method: 'POST',
-                body: JSON.stringify({ action: 'adminUpdateInstruction', recordId: recordId, instruction: val, adminName: CURRENT_USER.fullName })
-            });
-            const data = await res.json();
-            hideLoading();
-            showToast(data.message);
-            loadBootstrapData();
+    // Hiệu ứng nút đang lưu (không che toàn màn hình)
+    const btn = event.currentTarget;
+    const oldBtnText = btn.innerHTML;
+    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
+    btn.disabled = true;
+
+    try {
+        const res = await fetch(CURRENT_SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({ 
+                action: 'adminUpdateInstruction', 
+                recordId: recordId, 
+                instruction: val, 
+                adminName: CURRENT_USER.fullName 
+            })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            showToast("Đã lưu chỉ đạo thành công!");
+            btn.innerHTML = `<i class="fa-solid fa-check"></i> Đã lưu`;
+            btn.className = "btn btn-success";
+            setTimeout(() => {
+                btn.innerHTML = oldBtnText;
+                btn.className = "btn btn-primary";
+                btn.disabled = false;
+            }, 1500);
+            
+            // Cập nhật lại số lượng KPI "Chưa có chỉ đạo" trên màn hình nếu cần
+            updatePendingKpiLocally();
+        } else {
+            showToast(data.message || "Lỗi lưu dữ liệu");
+            btn.innerHTML = oldBtnText;
+            btn.disabled = false;
         }
+    } catch (e) {
+        showToast("Lỗi kết nối khi lưu!");
+        btn.innerHTML = oldBtnText;
+        btn.disabled = false;
+    }
+}
 
         function handleUploadCatalogFile() {
             const file = document.getElementById('catalogFileInput').files[0];
