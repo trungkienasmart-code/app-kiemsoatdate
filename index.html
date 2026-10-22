@@ -177,7 +177,7 @@
             <h2 style="font-size: 17px; margin-bottom: 14px; text-align:center; color:var(--primary);"><i class="fa-solid fa-calendar-check"></i> ĐĂNG NHẬP HỆ THỐNG</h2>
             <div class="form-group">
                 <label>Mã Công Ty / Doanh Nghiệp</label>
-                <input type="text" id="loginTenantCode" class="form-control" value="asmart" placeholder="VD: asmart, thagroup..." oninput="this.value=this.value.toLowerCase()">
+                <input type="text" id="loginTenantCode" class="form-control" value="" placeholder="VD: asmart, longto..." oninput="this.value=this.value.toLowerCase()">
             </div>
             <div class="form-group">
                 <label>Tên đăng nhập</label>
@@ -185,7 +185,7 @@
             </div>
             <div class="form-group">
                 <label>Mật khẩu</label>
-                <input type="password" id="loginPassword" class="form-control" value="123456" placeholder="Mật khẩu...">
+                <input type="password" id="loginPassword" class="form-control" value="" placeholder="Mật khẩu...">
             </div>
             <button class="btn btn-primary btn-block" style="margin-top:6px;" onclick="handleLogin()">
                 <i class="fa-solid fa-arrow-right-to-bracket"></i> ĐĂNG NHẬP
@@ -532,7 +532,7 @@
 
     <footer class="footer">
         App Tinh Gọn — Hệ Thống Kiểm Soát Date Siêu Thị<br>
-        <strong>AS Mart & THA Group — Chuyển Đổi Số Thực Chiến</strong>
+        <strong>App Tinh Gọn — Giải Pháp Chuyển Đổi Số Thực Chiến</strong>
     </footer>
 
     <!-- ================= JAVASCRIPT ENGINE ================= -->
@@ -908,6 +908,45 @@ function performProductSearch(query) {
     resultsBox.style.display = 'block';
 }
 
+        // Hàm kiểm tra mã vạch sau khi quét hoặc chọn từ gợi ý
+        function handleBarcodeLookup() {
+            const codeInput = document.getElementById('staffBarcodeInput');
+            const code = codeInput.value.trim();
+            if (!code) return;
+
+            // Đóng khung gợi ý nếu đang mở
+            document.getElementById('barcodeSearchResults').style.display = 'none';
+
+            if (LOCAL_PRODUCTS.has(code)) {
+                const p = LOCAL_PRODUCTS.get(code);
+                playFeedback('success');
+                showToast(`Đã nhận: ${p.tenHang} (${p.dvt})`);
+
+                // Tự động chuyển Quầy và Nhóm hàng theo thông tin của sản phẩm (nếu có trong cấu hình)
+                const counterSelect = document.getElementById('staffInputCounterSelect');
+                const catSelect = document.getElementById('staffInputCategorySelect');
+                if (p.maQuay && Array.from(counterSelect.options).some(o => o.value === p.maQuay)) {
+                    counterSelect.value = p.maQuay;
+                }
+                if (p.nhomHang && Array.from(catSelect.options).some(o => o.value === p.nhomHang)) {
+                    catSelect.value = p.nhomHang;
+                }
+
+                // Nhảy con trỏ thẳng xuống ô chọn Hạn sử dụng để nhân viên thao tác nhanh
+                document.getElementById('staffExpDateInput').focus();
+            } else {
+                // Nếu mã chưa có trong danh mục -> Bật popup khai báo nhanh
+                playFeedback('error');
+                document.getElementById('quickAddBarcode').value = code;
+                document.getElementById('quickAddName').value = '';
+                document.getElementById('quickAddDvt').value = 'Cái';
+                document.getElementById('quickAddCounter').value = document.getElementById('staffInputCounterSelect').value;
+                document.getElementById('quickAddCategory').value = document.getElementById('staffInputCategorySelect').value;
+                
+                document.getElementById('quickAddProductModal').style.display = 'flex';
+                setTimeout(() => document.getElementById('quickAddName').focus(), 150);
+            }
+        }
         async function handleConfirmQuickAddProduct() {
             const code = document.getElementById('quickAddBarcode').value.trim();
             const name = document.getElementById('quickAddName').value.trim();
@@ -1228,6 +1267,16 @@ async function handleAdminSaveInstruction(recordId) {
         btn.disabled = false;
     }
 }
+
+        // Hàm tự động đếm lại số mã "Chưa có chỉ đạo" trên màn hình Admin
+        function updatePendingKpiLocally() {
+            const inputs = document.querySelectorAll('#adminDashboardTableBody input[id^="instruct_"]');
+            let pendingCount = 0;
+            inputs.forEach(inp => {
+                if (!inp.value.trim()) pendingCount++;
+            });
+            document.getElementById('kpiPendingInstruct').innerText = pendingCount;
+        }
 
         function handleUploadCatalogFile() {
             const file = document.getElementById('catalogFileInput').files[0];
