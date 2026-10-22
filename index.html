@@ -726,53 +726,63 @@ async function loadBootstrapData() {
         }
 
         // ================= NHÂN VIÊN: HÀNG CẦN XỬ LÝ =================
-        async function loadStaffPendingList() {
-            const counter = document.getElementById('staffFilterCounterSelect').value || 'ALL';
-            showLoading("Đang nạp dữ liệu hàng date cần xử lý...", "Tải danh sách ngoài quầy");
-            try {
-                const res = await fetch(`${CURRENT_SCRIPT_URL}?action=getPendingDateRecords&branchId=${encodeURIComponent(CURRENT_USER.branch)}&counterId=${encodeURIComponent(counter)}`);
-                const data = await res.json();
-                hideLoading();
+async function loadStaffPendingList() {
+    const counter = document.getElementById('staffFilterCounterSelect').value || 'ALL';
+    showLoading("Đang nạp dữ liệu hàng date cần xử lý...", "Tải danh sách ngoài quầy");
+    try {
+        const res = await fetch(`${CURRENT_SCRIPT_URL}?action=getPendingDateRecords&branchId=${encodeURIComponent(CURRENT_USER.branch)}&counterId=${encodeURIComponent(counter)}`);
+        const data = await res.json();
 
-                const container = document.getElementById('staffPendingContainer');
-                container.innerHTML = '';
+        const container = document.getElementById('staffPendingContainer');
+        container.innerHTML = '';
 
-                if (!data.data || data.data.length === 0) {
-                    container.innerHTML = '<div style="text-align:center; padding:30px; color:var(--text-sub); font-size:13px;">Hiện tại quầy không có mã hàng nào cận date cần xử lý.</div>';
-                    return;
-                }
-
-                data.data.forEach(it => {
-                    const daysLeft = calculateDaysLeft(it.expDate);
-                    const badgeInfo = getWarningBadge(daysLeft);
-
-                    const div = document.createElement('div');
-                    div.className = `pending-card border-${badgeInfo.color}`;
-                    div.innerHTML = `
-                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
-                            <strong style="font-size:14px;">${it.tenHang}</strong>
-                            <span class="date-badge ${badgeInfo.class}">${badgeInfo.label} (${daysLeft} ngày)</span>
-                        </div>
-                        <div style="font-size:12px; color:var(--text-sub); margin-bottom:6px;">
-                            Mã: <strong>${it.maHang}</strong> | SL: <strong style="color:var(--danger); font-size:14px;">${it.sl}</strong> ${it.dvt} | HSD: <strong>${it.expDate}</strong>
-                        </div>
-                        <div style="background:var(--surface); border:1px dashed var(--border); border-radius:6px; padding:8px; margin-bottom:8px; font-size:12px;">
-                            <div style="font-weight:700; color:var(--primary); margin-bottom:2px;"><i class="fa-solid fa-bullhorn"></i> Hướng dẫn xử lý của Admin:</div>
-                            <div>${it.huongXuLy ? `<strong style="color:var(--danger);">${it.huongXuLy}</strong> (${it.adminChiDao || 'Admin'})` : '<i style="color:var(--text-sub);">Đang chờ quản lý đưa hướng xử lý...</i>'}</div>
-                        </div>
-                        <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
-                            <button class="btn btn-success" style="font-size:11px; padding:6px 10px;" onclick="confirmStaffResolved('${it.id}')" ${it.trangThaiLam === 'DA_THUC_HIEN' ? 'disabled' : ''}>
-                                <i class="fa-solid fa-check"></i> ${it.trangThaiLam === 'DA_THUC_HIEN' ? 'Đã thực hiện xong' : 'Đã làm theo hướng dẫn'}
-                            </button>
-                            <button class="btn btn-secondary" style="font-size:11px; padding:6px 10px;" onclick="closeDateItem('${it.id}')">
-                                <i class="fa-solid fa-circle-check"></i> Đã bán hết / Đã hủy
-                            </button>
-                        </div>
-                    `;
-                    container.appendChild(div);
-                });
-            } catch (e) { hideLoading(); }
+        // Kiểm tra lỗi từ server trả về
+        if (!data.success) {
+            container.innerHTML = `<div style="text-align:center; padding:30px; color:var(--danger); font-size:13px;">Lỗi: ${data.message || data.error || 'Không thể lấy dữ liệu'}</div>`;
+            return;
         }
+
+        if (!data.data || data.data.length === 0) {
+            container.innerHTML = '<div style="text-align:center; padding:30px; color:var(--text-sub); font-size:13px;">Hiện tại quầy không có mã hàng nào cận date cần xử lý.</div>';
+            return;
+        }
+
+        data.data.forEach(it => {
+            const daysLeft = calculateDaysLeft(it.expDate);
+            const badgeInfo = getWarningBadge(daysLeft);
+
+            const div = document.createElement('div');
+            div.className = `pending-card border-${badgeInfo.color}`;
+            div.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
+                    <strong style="font-size:14px;">${it.tenHang}</strong>
+                    <span class="date-badge ${badgeInfo.class}">${badgeInfo.label} (${daysLeft} ngày)</span>
+                </div>
+                <div style="font-size:12px; color:var(--text-sub); margin-bottom:6px;">
+                    Mã: <strong>${it.maHang}</strong> | SL: <strong style="color:var(--danger); font-size:14px;">${it.sl}</strong> ${it.dvt} | HSD: <strong>${it.expDate}</strong>
+                </div>
+                <div style="background:var(--surface); border:1px dashed var(--border); border-radius:6px; padding:8px; margin-bottom:8px; font-size:12px;">
+                    <div style="font-weight:700; color:var(--primary); margin-bottom:2px;"><i class="fa-solid fa-bullhorn"></i> Hướng dẫn xử lý của Admin:</div>
+                    <div>${it.huongXuLy ? `<strong style="color:var(--danger);">${it.huongXuLy}</strong> (${it.adminChiDao || 'Admin'})` : '<i style="color:var(--text-sub);">Đang chờ quản lý đưa hướng xử lý...</i>'}</div>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
+                    <button class="btn btn-success" style="font-size:11px; padding:6px 10px;" onclick="confirmStaffResolved('${it.id}')" ${it.trangThaiLam === 'DA_THUC_HIEN' ? 'disabled' : ''}>
+                        <i class="fa-solid fa-check"></i> ${it.trangThaiLam === 'DA_THUC_HIEN' ? 'Đã thực hiện xong' : 'Đã làm theo hướng dẫn'}
+                    </button>
+                    <button class="btn btn-secondary" style="font-size:11px; padding:6px 10px;" onclick="closeDateItem('${it.id}')">
+                        <i class="fa-solid fa-circle-check"></i> Đã bán hết / Đã hủy
+                    </button>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    } catch (e) {
+        console.error(e);
+        document.getElementById('staffPendingContainer').innerHTML = '<div style="text-align:center; padding:30px; color:var(--danger); font-size:13px;">Lỗi kết nối máy chủ!</div>';
+    } finally {
+        hideLoading(); // Luôn tắt loading dù thành công hay thất bại
+    }
+}
 
 async function confirmStaffResolved(recordId) {
     const btn = event.currentTarget;
@@ -1385,34 +1395,45 @@ async function handleAdminSaveInstruction(recordId) {
         }
 
         let REPORT_CACHE_DATA = [];
-        async function handleRunDateReport() {
-            const fDate = document.getElementById('reportFromDate').value;
-            const tDate = document.getElementById('reportToDate').value;
-            const br = document.getElementById('reportBranchSelect').value;
+async function handleRunDateReport() {
+    const fDate = document.getElementById('reportFromDate').value;
+    const tDate = document.getElementById('reportToDate').value;
+    const br = document.getElementById('reportBranchSelect').value;
 
-            showLoading("Đang tổng hợp báo cáo...", "Truy xuất lịch sử rà soát");
-            const res = await fetch(`${CURRENT_SCRIPT_URL}?action=getDateReport&fromDate=${fDate}&toDate=${tDate}&branchId=${br}&counterId=ALL&catId=ALL`);
-            const data = await res.json();
-            hideLoading();
+    showLoading("Đang tổng hợp báo cáo...", "Truy xuất lịch sử rà soát");
+    try {
+        const res = await fetch(`${CURRENT_SCRIPT_URL}?action=getDateReport&fromDate=${fDate}&toDate=${tDate}&branchId=${br}&counterId=ALL&catId=ALL`);
+        const data = await res.json();
 
-            REPORT_CACHE_DATA = data.data || [];
-            const tbody = document.getElementById('adminReportTableBody');
-            tbody.innerHTML = '';
-
-            REPORT_CACHE_DATA.forEach(r => {
-                const row = tbody.insertRow();
-                row.innerHTML = `
-                    <td><strong>${r.maHang}</strong></td>
-                    <td>${r.tenHang}</td>
-                    <td>${r.sl} ${r.dvt}</td>
-                    <td>${r.expDate}</td>
-                    <td>${r.staffQuet} <br><small style="color:var(--text-sub);">${r.timeQuet}</small></td>
-                    <td>${r.huongXuLy || '<i>Chưa có</i>'} <br><small style="color:var(--text-sub);">${r.timeChiDao}</small></td>
-                    <td>${r.trangThaiLam === 'DA_THUC_HIEN' ? '<span style="color:var(--success);">Đã làm</span>' : '<span style="color:var(--danger);">Chưa</span>'} <br><small style="color:var(--text-sub);">${r.timeLam}</small></td>
-                    <td>${r.trangThaiCuoi === 'HOAN_THANH' ? `<strong style="color:var(--success);">${r.ketQuaCuoi} (Hủy: ${r.slHuy})</strong>` : 'Đang theo dõi'}</td>
-                `;
-            });
+        if (!data.success) {
+            showToast(data.message || data.error || "Lỗi lấy báo cáo");
+            return;
         }
+
+        REPORT_CACHE_DATA = data.data || [];
+        const tbody = document.getElementById('adminReportTableBody');
+        tbody.innerHTML = '';
+
+        REPORT_CACHE_DATA.forEach(r => {
+            const row = tbody.insertRow();
+            row.innerHTML = `
+                <td><strong>${r.maHang}</strong></td>
+                <td>${r.tenHang}</td>
+                <td>${r.sl} ${r.dvt}</td>
+                <td>${r.expDate}</td>
+                <td>${r.staffQuet} <br><small style="color:var(--text-sub);">${r.timeQuet}</small></td>
+                <td>${r.huongXuLy || '<i>Chưa có</i>'} <br><small style="color:var(--text-sub);">${r.timeChiDao}</small></td>
+                <td>${r.trangThaiLam === 'DA_THUC_HIEN' ? '<span style="color:var(--success);">Đã làm</span>' : '<span style="color:var(--danger);">Chưa</span>'} <br><small style="color:var(--text-sub);">${r.timeLam}</small></td>
+                <td>${r.trangThaiCuoi === 'HOAN_THANH' ? `<strong style="color:var(--success);">${r.ketQuaCuoi} (Hủy: ${r.slHuy})</strong>` : 'Đang theo dõi'}</td>
+            `;
+        });
+    } catch (e) {
+        console.error(e);
+        showToast("Lỗi kết nối máy chủ!");
+    } finally {
+        hideLoading(); // Luôn tắt loading
+    }
+}
 
         function exportReportExcel() {
             if (REPORT_CACHE_DATA.length === 0) return showToast("Chưa có dữ liệu báo cáo!");
