@@ -52,7 +52,7 @@
         .footer { margin-top: auto; padding: 12px; text-align: center; font-size: 11px; color: var(--text-sub); border-top: 1px dashed var(--border); background: var(--surface); }
         .footer strong { color: var(--primary); }
 
-        .container { width: 100%; max-width: 1050px; margin: 0 auto; padding: 12px; }
+        .container { width: 100%; max-width: 98%; margin: 0 auto; padding: 12px 20px; }
         .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
 
         /* TABS */
@@ -333,25 +333,42 @@
                             <button class="btn btn-primary btn-block" onclick="loadAdminDashboardData()"><i class="fa-solid fa-arrows-rotate"></i> Làm Mới Dữ Liệu</button>
                         </div>
                     </div>
+<!-- Thanh tìm kiếm & Xuất Excel -->
+<div style="display:flex; gap:8px; margin-top: 10px; margin-bottom: 10px; align-items:center;">
+    <input type="text" id="adminDashSearchInput" class="form-control" placeholder="🔍 Tìm kiếm nhanh theo Mã hàng, Tên hàng, Quầy..." style="flex:1;" oninput="filterAdminDashboardTable()">
+    <button class="btn btn-success" onclick="exportDashboardToExcel()" style="white-space: nowrap;">
+        <i class="fa-solid fa-file-excel"></i> Xuất Excel
+    </button>
+</div>
 
-                    <div class="table-wrap" style="max-height:400px;">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>CẢNH BÁO</th>
-                                    <th>MÃ HÀNG</th>
-                                    <th>TÊN HÀNG</th>
-                                    <th>SL</th>
-                                    <th>HẠN DÙNG</th>
-                                    <th>QUẦY</th>
-                                    <th>CHỈ ĐẠO CỦA ADMIN</th>
-                                    <th>NV THỰC HIỆN</th>
-                                    <th>THAO TÁC</th>
-                                </tr>
-                            </thead>
-                            <tbody id="adminDashboardTableBody"></tbody>
-                        </table>
-                    </div>
+<!-- Khung Chỉ đạo hàng loạt -->
+<div style="background: var(--bg); padding: 10px; border-radius: 8px; margin-bottom: 12px; display: flex; gap: 8px; align-items: center; border: 1px dashed var(--primary);">
+    <span style="font-size: 12px; font-weight: bold; color: var(--primary); white-space: nowrap;"><i class="fa-solid fa-layer-group"></i> Chỉ đạo hàng loạt:</span>
+    <input type="text" id="batchInstructionInput" list="actionTemplatesList" class="form-control" placeholder="Gõ hoặc chọn phương án..." style="flex: 1;">
+    <button class="btn btn-warning" onclick="handleBatchAdminSave()" style="white-space: nowrap;">
+        <i class="fa-solid fa-bolt"></i> Áp dụng
+    </button>
+</div>
+
+<div class="table-wrap" style="max-height:400px;">
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 30px; text-align:center;"><input type="checkbox" id="adminDashSelectAll" onchange="toggleSelectAllAdminDash(this)"></th>
+                <th>CẢNH BÁO</th>
+                <th>MÃ HÀNG</th>
+                <th>TÊN HÀNG</th>
+                <th>SL</th>
+                <th>HẠN DÙNG</th>
+                <th>QUẦY</th>
+                <th>CHỈ ĐẠO CỦA ADMIN</th>
+                <th>NV THỰC HIỆN</th>
+                <th>THAO TÁC</th>
+            </tr>
+        </thead>
+        <tbody id="adminDashboardTableBody"></tbody>
+    </table>
+</div>
                 </div>
             </div>
 
@@ -530,10 +547,13 @@
         </div>
     </div>
 
-    <footer class="footer">
-        App Tinh Gọn — Hệ Thống Kiểm Soát Date Siêu Thị<br>
-        <strong>App Tinh Gọn — Giải Pháp Chuyển Đổi Số Thực Chiến</strong>
-    </footer>
+<footer class="footer">
+    App Tinh Gọn — Hệ Thống Kiểm Soát Date Siêu Thị<br>
+    <strong>App Tinh Gọn — Giải Pháp Chuyển Đổi Số Thực Chiến</strong><br>
+    <span style="font-size: 12px; color: var(--primary); margin-top: 6px; display: inline-block;">
+        <i class="fa-solid fa-phone"></i> Hotline/Zalo hỗ trợ: <strong style="font-size: 14px;">0916 887 359</strong>
+    </span>
+</footer>
 
     <!-- ================= JAVASCRIPT ENGINE ================= -->
     <script>
@@ -545,6 +565,7 @@
         };
 
         let CURRENT_SCRIPT_URL = "";
+        let ADMIN_DASHBOARD_DATA = [];
         let CURRENT_USER = null;
         let LOCAL_PRODUCTS = new Map();
         let BOOTSTRAP_DATA = { counters: [], categories: [], actionTemplates: [] };
@@ -1186,50 +1207,91 @@ function performProductSearch(query) {
         }
 
         // ================= ADMIN: DASHBOARD & CẤU HÌNH =================
-        async function loadAdminDashboardData() {
-            const branch = document.getElementById('adminBranchFilter').value || (CURRENT_USER.branch === 'ALL' ? '' : CURRENT_USER.branch);
-            showLoading("Đang tải dữ liệu Dashboard...", "Tổng hợp cảnh báo toàn hệ thống");
-            try {
-                const res = await fetch(`${CURRENT_SCRIPT_URL}?action=getAdminDashboard&branchId=${encodeURIComponent(branch)}`);
-                const data = await res.json();
-                hideLoading();
+async function loadAdminDashboardData() {
+    const branch = document.getElementById('adminBranchFilter').value || (CURRENT_USER.branch === 'ALL' ? '' : CURRENT_USER.branch);
+    showLoading("Đang tải dữ liệu Dashboard...", "Tổng hợp cảnh báo toàn hệ thống");
+    
+    try {
+        const res = await fetch(`${CURRENT_SCRIPT_URL}?action=getAdminDashboard&branchId=${encodeURIComponent(branch)}`);
+        const data = await res.json();
 
-                let red = 0, orange = 0, pending = 0;
-                const tbody = document.getElementById('adminDashboardTableBody');
-                tbody.innerHTML = '';
-
-                data.data.forEach(it => {
-                    const daysLeft = calculateDaysLeft(it.expDate);
-                    const b = getWarningBadge(daysLeft);
-
-                    if (daysLeft <= 7) red++;
-                    else if (daysLeft <= 15) orange++;
-                    if (!it.huongXuLy) pending++;
-
-                    const row = tbody.insertRow();
-                    row.innerHTML = `
-                        <td><span class="date-badge ${b.class}">${b.label} (${daysLeft}n)</span></td>
-                        <td><strong>${it.maHang}</strong></td>
-                        <td>${it.tenHang}</td>
-                        <td><strong style="color:var(--danger);">${it.sl}</strong> ${it.dvt}</td>
-                        <td>${it.expDate}</td>
-                        <td>${it.counter}</td>
-                        <td>
-                            <input type="text" list="actionTemplatesList" class="form-control" style="font-size:12px; padding:4px 8px;" id="instruct_${it.id}" value="${it.huongXuLy || ''}" placeholder="Gõ hoặc chọn phương án...">
-                        </td>
-                        <td>${it.trangThaiLam === 'DA_THUC_HIEN' ? '<span style="color:var(--success); font-weight:bold;"><i class="fa-solid fa-check-double"></i> Đã làm</span>' : '<span style="color:var(--text-sub);">Chưa làm</span>'}</td>
-                        <td>
-                            <button class="btn btn-primary" style="font-size:11px; padding:4px 8px;" onclick="handleAdminSaveInstruction('${it.id}')"><i class="fa-solid fa-floppy-disk"></i> Lưu</button>
-                        </td>
-                    `;
-                });
-
-                document.getElementById('kpiTotal').innerText = data.data.length;
-                document.getElementById('kpiRed').innerText = red;
-                document.getElementById('kpiOrange').innerText = orange;
-                document.getElementById('kpiPendingInstruct').innerText = pending;
-            } catch (e) { hideLoading(); }
+        if (!data.success) {
+            showToast(data.message || "Lỗi tải dữ liệu");
+            return;
         }
+
+        ADMIN_DASHBOARD_DATA = data.data || [];
+        let red = 0, orange = 0, pending = 0;
+        const tbody = document.getElementById('adminDashboardTableBody');
+        tbody.innerHTML = '';
+
+        ADMIN_DASHBOARD_DATA.forEach(it => {
+            const daysLeft = calculateDaysLeft(it.expDate);
+            const b = getWarningBadge(daysLeft);
+
+            if (daysLeft <= 7) red++;
+            else if (daysLeft <= 15) orange++;
+            if (!it.huongXuLy) pending++;
+
+            const row = tbody.insertRow();
+            row.innerHTML = `
+                <td style="text-align:center;"><input type="checkbox" class="admin-row-checkbox" value="${it.id}"></td>
+                <td><span class="date-badge ${b.class}">${b.label} (${daysLeft}n)</span></td>
+                <td><strong>${it.maHang}</strong></td>
+                <td>${it.tenHang}</td>
+                <td><strong style="color:var(--danger);">${it.sl}</strong> ${it.dvt}</td>
+                <td>${it.expDate}</td>
+                <td>${it.counter}</td>
+                <td>
+                    <input type="text" list="actionTemplatesList" class="form-control" style="font-size:12px; padding:4px 8px;" id="instruct_${it.id}" value="${it.huongXuLy || ''}" placeholder="Gõ hoặc chọn phương án...">
+                </td>
+                <td>${it.trangThaiLam === 'DA_THUC_HIEN' ? '<span style="color:var(--success); font-weight:bold;"><i class="fa-solid fa-check-double"></i> Đã làm</span>' : '<span style="color:var(--text-sub);">Chưa làm</span>'}</td>
+                <td>
+                    <button class="btn btn-primary" style="font-size:11px; padding:4px 8px;" onclick="handleAdminSaveInstruction('${it.id}')"><i class="fa-solid fa-floppy-disk"></i> Lưu</button>
+                </td>
+            `;
+        });
+
+        document.getElementById('kpiTotal').innerText = ADMIN_DASHBOARD_DATA.length;
+        document.getElementById('kpiRed').innerText = red;
+        document.getElementById('kpiOrange').innerText = orange;
+        document.getElementById('kpiPendingInstruct').innerText = pending;
+
+        // Reset ô search & Select All
+        document.getElementById('adminDashSearchInput').value = '';
+        document.getElementById('adminDashSelectAll').checked = false;
+        
+    } catch (e) { 
+        console.error(e);
+        showToast("Lỗi kết nối khi tải Dashboard!"); 
+    } finally {
+        hideLoading(); 
+    }
+}
+
+// Lọc dữ liệu trên bảng
+function filterAdminDashboardTable() {
+    const query = document.getElementById('adminDashSearchInput').value.toLowerCase().trim();
+    const rows = document.querySelectorAll('#adminDashboardTableBody tr');
+    
+    rows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        row.style.display = text.includes(query) ? '' : 'none';
+    });
+    
+    // Bỏ tích chọn tất cả nếu đang lọc
+    document.getElementById('adminDashSelectAll').checked = false;
+}
+
+// Chọn tất cả (chỉ chọn các dòng đang hiển thị)
+function toggleSelectAllAdminDash(source) {
+    const checkboxes = document.querySelectorAll('.admin-row-checkbox');
+    checkboxes.forEach(cb => {
+        if (cb.closest('tr').style.display !== 'none') {
+            cb.checked = source.checked;
+        }
+    });
+}
 
 async function handleAdminSaveInstruction(recordId) {
     const inputEl = document.getElementById(`instruct_${recordId}`);
@@ -1278,6 +1340,74 @@ async function handleAdminSaveInstruction(recordId) {
     }
 }
 
+        // Xử lý Chỉ đạo hàng loạt
+async function handleBatchAdminSave() {
+    const instruction = document.getElementById('batchInstructionInput').value.trim();
+    if (!instruction) return showToast("Vui lòng nhập nội dung chỉ đạo!");
+
+    const checkboxes = document.querySelectorAll('.admin-row-checkbox:checked');
+    if (checkboxes.length === 0) return showToast("Vui lòng tích chọn ít nhất 1 mã hàng!");
+
+    const recordIds = Array.from(checkboxes).map(cb => cb.value);
+
+    showLoading(`Đang áp dụng chỉ đạo cho ${recordIds.length} mã...`, "Vui lòng chờ");
+    try {
+        const res = await fetch(CURRENT_SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({ 
+                action: 'batchUpdateInstruction', 
+                recordIds: recordIds, 
+                instruction: instruction, 
+                adminName: CURRENT_USER.fullName 
+            })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            showToast(data.message);
+            document.getElementById('batchInstructionInput').value = ''; // Xóa ô nhập
+            loadAdminDashboardData(); // Tải lại bảng
+        } else {
+            showToast(data.message);
+        }
+    } catch (e) {
+        showToast("Lỗi kết nối!");
+    } finally {
+        hideLoading();
+    }
+}
+// Xuất Excel từ Dashboard (Chỉ xuất các dòng đang hiển thị sau khi lọc)
+function exportDashboardToExcel() {
+    const query = document.getElementById('adminDashSearchInput').value.toLowerCase().trim();
+    
+    // Lọc dữ liệu theo từ khóa tìm kiếm (nếu có)
+    const filteredData = ADMIN_DASHBOARD_DATA.filter(it => {
+        const text = `${it.maHang} ${it.tenHang} ${it.counter} ${it.expDate}`.toLowerCase();
+        return text.includes(query);
+    });
+
+    if (filteredData.length === 0) return showToast("Không có dữ liệu để xuất!");
+
+    // Format lại dữ liệu cho đẹp
+    const exportData = filteredData.map(it => ({
+        'Mã hàng': it.maHang,
+        'Tên hàng': it.tenHang,
+        'Số lượng': it.sl,
+        'ĐVT': it.dvt,
+        'Hạn sử dụng': it.expDate,
+        'Quầy': it.counter,
+        'Chỉ đạo Admin': it.huongXuLy || 'Chưa có',
+        'Admin chỉ đạo': it.adminChiDao || '',
+        'Trạng thái thực hiện': it.trangThaiLam === 'DA_THUC_HIEN' ? 'Đã làm' : 'Chưa làm'
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Dashboard_CanXuLy");
+    XLSX.writeFile(wb, `Dashboard_Date_${new Date().getTime()}.xlsx`);
+    showToast("Đã xuất file Excel thành công!");
+}
+        
         // Hàm tự động đếm lại số mã "Chưa có chỉ đạo" trên màn hình Admin
         function updatePendingKpiLocally() {
             const inputs = document.querySelectorAll('#adminDashboardTableBody input[id^="instruct_"]');
